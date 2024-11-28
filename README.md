@@ -211,3 +211,142 @@ Creamos los datos de prueba en la base de datos
 ```shellscript
 python manage.py populate_db
 ```
+
+# Products
+
+## Product model
+
+Creado previamente con los otros modelos
+
+## Product serializer
+
+En `api` creamos el archivo `serializers.py`. Mediante los serializers podemos convertir los modelos de datos de Django (que son las tablas de la DB) en JSON o XML, para poder enviarlos al front. A su vez los serializers validan y convierten los datos en JSON o XML que llegan desde el front en datos que podemos utilizar mediante los modelos (deserialize)
+
+```py3
+from rest_framework import serializers
+from .models import Product, Order, OrderItem
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        # para saber el tipo de dato de cada elemento de fields se basa en el model, es decir, para name el tipo de datos es models.CharField
+        fields = (
+            # es un campo que viene implícito en models.Model, por eso no se declara en el modelo Product
+            'id',
+            'name',
+            'description',
+            'price',
+            'stock',            
+        )
+
+    # podemos crear una función que valide los datos que vienen del front o enviamos
+    def validate_price(self, value):
+        if value < 0:
+            # raise es un return para errores
+            raise serializers.ValidationError('El precio tiene que ser mayor que 0')
+        return value
+```
+
+## Product view (basic)
+
+```py3
+from django.http import JsonResponse
+from api.serializers import ProductSerializer
+from api.models import Product
+
+# una función que vamos usar como view, la cual va a devolver una lista de productos
+def product_list(request):
+    # traemos todos los productos de la db usando el modelo Product
+    products = Product.objects.all()
+    # indicamos que tiene que serializar (convertir en json) para devolver, todos los elementos que traemos en products. Al products traer mas de un objeto (uno por cada producto) tenemos que indicar many=True
+    serializer = ProductSerializer(products, many=True)
+    return JsonResponse({
+        'data': serializer.data
+        })
+```
+
+## Product url (basic)
+
+En `api` creamos el archivo `urls.py`
+
+```py3
+from django.urls import path
+from . import views
+
+
+urlpatterns = [
+    path('products/', views.product_list)
+]
+```
+
+En `backend` editamos el archivo `urls.py`
+
+```py3
+from django.contrib import admin
+from django.urls import path, include
+
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('api.urls')),
+]
+```
+
+## Api view with response
+
+```py3
+# from django.http import JsonResponse
+from api.serializers import ProductSerializer
+from api.models import Product
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+
+# mediante @api_view definimos que product_list va a ser un 'método view' de tipo api, indicamos que solo va a poder recibir métodos HTTP de tipo GET
+@api_view(['GET'])
+def product_list(request):
+    products = Product.objects.all()
+    serializer = ProductSerializer(products, many=True)
+    # la clase Response se encarga, mediante el serializer que pasamos, de ordenar el tipo de dato de la respuesta y generar una vista (view)
+    return Response(serializer.data)
+```
+
+## Response a single object
+
+En `api` editamos `views.py`
+
+```py3
+from django.shortcuts import get_object_or_404
+from api.serializers import ProductSerializer
+from api.models import Product
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+
+
+@api_view(['GET'])
+def product_list(request):
+    products = Product.objects.all()
+    serializer = ProductSerializer(products, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def product_details(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    serializer = ProductSerializer(product)
+    return Response(serializer.data)
+```
+
+En `api` editamos `urls.py`
+
+```py3
+from django.urls import path
+from . import views
+
+
+urlpatterns = [
+    path('products/', views.product_list),
+    # mediante <int:pk> indicamos que es un valor int que se va a identificar como pk en la request que viene del front
+    path('products/<int:pk>/', views.product_details)
+]
+```
