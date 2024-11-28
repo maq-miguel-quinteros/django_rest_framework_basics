@@ -45,7 +45,10 @@ pip install -r backend/requirements.txt # if pull project
 Creamos un archivo `.gitignore` con el siguiente contenido
 
 ```plaintext
-env/
+*.pyc
+__pycache__
+db.sqlite3
+.env
 ```
 
 ## Create project
@@ -141,4 +144,70 @@ class OrderItem(models.Model):
     
     def __str__(self):
         return f'{self.quantity} x {self.product.name} in order {self.order.order_id}'
+```
+
+En `backend` configuramos `settings.py`. Agregamos al final del archivo
+
+```py3
+# Como configuramos un modelo de usuario personalizado tenemos que declarar el mismo
+AUTH_USER_MODEL = 'api.User'
+```
+
+## Makemigrations & migrate
+
+```shellscript
+python manage.py makemigrations
+python manage.py migrate
+```
+
+## Data for testing
+
+En `api` creamos la carpeta `management` y dentro la carpeta `commands`. En commands creamos el archivo `__init__.py`, que queda vacío, este sirve para indicar que al ejecutar la aplicación debe ejecutarse el contenido de la carpeta donde se aloja, y creamos el archivo `populate_db.py` al que cargamos lo siguiente. Mediante este archivo vamos a crear datos de prueba en la base de datos que creamos antes con migrate
+
+```py3
+import random
+from decimal import Decimal
+
+from django.core.management.base import BaseCommand
+from django.utils import lorem_ipsum
+from api.models import User, Product, Order, OrderItem
+
+class Command(BaseCommand):
+    help = 'Creates application data'
+
+    def handle(self, *args, **kwargs):
+        # get or create superuser
+        user = User.objects.filter(username='admin').first()
+        if not user:
+            user = User.objects.create_superuser(username='admin', password='test')
+
+        # create products - name, desc, price, stock, image
+        products = [
+            Product(name="A Scanner Darkly", description=lorem_ipsum.paragraph(), price=Decimal('12.99'), stock=4),
+            Product(name="Coffee Machine", description=lorem_ipsum.paragraph(), price=Decimal('70.99'), stock=6),
+            Product(name="Velvet Underground & Nico", description=lorem_ipsum.paragraph(), price=Decimal('15.99'), stock=11),
+            Product(name="Enter the Wu-Tang (36 Chambers)", description=lorem_ipsum.paragraph(), price=Decimal('17.99'), stock=2),
+            Product(name="Digital Camera", description=lorem_ipsum.paragraph(), price=Decimal('350.99'), stock=4),
+            Product(name="Watch", description=lorem_ipsum.paragraph(), price=Decimal('500.05'), stock=0),
+        ]
+
+        # create products & re-fetch from DB
+        Product.objects.bulk_create(products)
+        products = Product.objects.all()
+
+
+        # create some dummy orders tied to the superuser
+        for _ in range(3):
+            # create an Order with 2 order items
+            order = Order.objects.create(user=user)
+            for product in random.sample(list(products), 2):
+                OrderItem.objects.create(
+                    order=order, product=product, quantity=random.randint(1,3)
+                )
+```
+
+Creamos los datos de prueba en la base de datos
+
+```shellscript
+python manage.py populate_db
 ```
