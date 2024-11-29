@@ -21,3 +21,18 @@ class ProductSerializer(serializers.ModelSerializer):
             # raise es un return para errores
             raise serializers.ValidationError('El precio tiene que ser mayor que 0')
         return value
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ('product', 'quantity')
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    # anidamos el OrderItemSerializer dentro de OrderSerializer. Traemos los registros del modelo OrderItem. Para establecer la coincidencia el nombre del atributo items tiene que coincidir con el related_name='items' del modelo OrderItem. Ya que el modelo desde donde traemos los datos es Order, en OrderItem configuramos la ForeignKey Order
+    items = OrderItemSerializer(many=True, read_only=True)
+    class Meta:
+        model = Order
+        # agregamos a los fields propios del modelo el field items que creamos arriba
+        fields = ('order_id', 'created_at', 'user', 'status', 'items')

@@ -350,3 +350,84 @@ urlpatterns = [
     path('products/<int:pk>/', views.product_details)
 ]
 ```
+
+# Serializer
+
+## Models
+
+En `api` editamos `models.py`
+
+```py3
+#...
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(
+            Order, 
+            on_delete=models.CASCADE,
+            # mediante related_name indicamos de que forma puede llamarse este campo en un serializer relacionado con el modelo Order al que hace referencia esta configuración
+            related_name='items'
+        )
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+
+#...
+```
+
+## Nested serializers (serializer anidados)
+
+Configuramos el serializer para el modelo `Order`. Este tiene un atributo `products` que está relacionado con el modelo `OrderItem`. Configuramos el serializer anidado para este par de modelos. En `api` editamos `serializers.py`
+
+```py3
+from rest_framework import serializers
+from .models import Product, Order, OrderItem
+
+#...
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ('product', 'quantity')
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    # anidamos el OrderItemSerializer dentro de OrderSerializer. Traemos los registros del modelo OrderItem. Para establecer la coincidencia el nombre del atributo items tiene que coincidir con el related_name='items' del modelo OrderItem. Ya que el modelo desde donde traemos los datos es Order, en OrderItem configuramos la ForeignKey Order
+    items = OrderItemSerializer(many=True, read_only=True)
+    class Meta:
+        model = Order
+        # agregamos a los fields propios del modelo el field items que creamos arriba
+        fields = ('order_id', 'created_at', 'user', 'status', 'items')
+```
+
+## Views
+
+En `api` editamos `views.py`
+
+```py3
+from django.shortcuts import get_object_or_404
+from api.serializers import ProductSerializer, OrderSerializer, OrderItemSerializer
+from api.models import Product, Order, OrderItem
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+
+#...
+
+@api_view(['GET'])
+def order_list(request):
+    orders = Order.objects.all()
+    serializer = OrderSerializer(orders, many=True)
+    return Response(serializer.data)
+```
+
+En `api` editamos `urls.py`
+
+```py3
+from django.urls import path
+from . import views
+
+
+urlpatterns = [
+    path('products/', views.product_list),    
+    path('products/<int:pk>/', views.product_details),
+    path('orders/', views.order_list),
+]
+```

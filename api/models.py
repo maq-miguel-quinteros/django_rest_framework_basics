@@ -49,7 +49,12 @@ class Order(models.Model):
     
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    order = models.ForeignKey(
+            Order, 
+            on_delete=models.CASCADE,
+            # mediante related_name indicamos de que forma puede llamarse este campo en un serializer relacionado con el modelo Order al que hace referencia esta configuración
+            related_name='items'
+        )
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
 
