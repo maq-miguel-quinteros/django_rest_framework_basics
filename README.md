@@ -431,3 +431,53 @@ urlpatterns = [
     path('orders/', views.order_list),
 ]
 ```
+
+## SerializerMethodField
+
+En `api` editamos `serializers.py`
+
+```py3
+from rest_framework import serializers
+from .models import Product, Order, OrderItem
+
+#...
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+
+    # creamos un atributo que vamos a asignar con lo que devuelva el método que pasamos como mediante SerializerMethodField. Podemos pasar el método entre los () o podemos llamar al método get_NOMBRE_MÉTODO y django va a interpretar que este el el método que asignará valores al atributo
+    total_price = serializers.SerializerMethodField()
+
+    # definimos la función que va a utilizar SerializerMethodField para dar valor a total_price
+    def get_total_price(self, obj):
+        # obj es la consulta que estamos realizando en ese momento mediante el serializer
+        order_items = obj.items.all()
+        # subtotal es un atributo que generamos en el modelo OrderItem
+        return sum(order_item.subtotal for order_item in order_items)
+
+    class Meta:
+        model = Order
+        # agregamos a los fields propios del modelo el field items que creamos arriba
+        fields = ('order_id', 'created_at', 'user', 'status', 'items', 'total_price')
+```
+
+## Nested Serializer for Product
+
+En `api` editamos `serializer.py`
+
+```py3
+from rest_framework import serializers
+from .models import Product, Order, OrderItem
+
+#...
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    # va a traer los productos que coincidan con la consulta, ya que en el modelo OrderItem tenemos un atributo product que tiene configurada una ForeignKey del modelo Product, es decir, no tenemos que usar el parámetro related_name para este caso 
+    product = ProductSerializer()
+    class Meta:
+        model = OrderItem
+        # por defecto solo mostraba el id del producto, ahora que configuramos fuera de meta un atributo product con lo que devuelve el serializer, va a traer esos datos
+        fields = ('product', 'quantity')
+
+#...
+```
