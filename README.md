@@ -9,16 +9,18 @@ Vamos a generar una base de datos que cuente con las siguiente tablas:
 * `User`: quien genera una nueva orden de compra
 * Otras clases para establecer permisos de usuarios
 
-# Setup
+# Setup and Models
 
-## Virtual environment
+## Setup
+
+### Virtual environment
 
 ```shellscript
 python -m venv env
 env/Scripts/activate # source env/bin/activate in GitHub Codespaces
 ```
 
-## Dependencies
+### Dependencies
 
 Creamos un archivo `requirements.txt` con el siguiente contenido
 
@@ -40,7 +42,7 @@ pip install -r requirements.txt
 pip install -r backend/requirements.txt # if pull project
 ```
 
-## Git ignore
+### Git ignore
 
 Creamos un archivo `.gitignore` con el siguiente contenido
 
@@ -51,7 +53,7 @@ db.sqlite3
 .env
 ```
 
-## Create project
+### Create project
 
 Creamos un nuevo proyecto con nombre backend. Puede tener cualquier nombre
 
@@ -59,7 +61,7 @@ Creamos un nuevo proyecto con nombre backend. Puede tener cualquier nombre
 django-admin startproject backend .
 ```
 
-## Create api app
+### Create api app
 
 Creamos una nueva app llamada `api`
 
@@ -78,7 +80,9 @@ INSTALLED_APPS = [
 ]
 ```
 
-# Models
+## Models
+
+### Models
 
 En `models.py` de `api`
 
@@ -153,7 +157,7 @@ En `backend` configuramos `settings.py`. Agregamos al final del archivo
 AUTH_USER_MODEL = 'api.User'
 ```
 
-## Makemigrations & migrate
+### Makemigrations & migrate
 
 ```shellscript
 python manage.py makemigrations
@@ -212,13 +216,9 @@ Creamos los datos de prueba en la base de datos
 python manage.py populate_db
 ```
 
-# Products
+# Serializers & Response objects | Browsable API
 
-## Product model
-
-Creado previamente con los otros modelos
-
-## Product serializer
+## ModelSerializer for Product
 
 En `api` creamos el archivo `serializers.py`. Mediante los serializers podemos convertir los modelos de datos de Django (que son las tablas de la DB) en JSON o XML, para poder enviarlos al front. A su vez los serializers validan y convierten los datos en JSON o XML que llegan desde el front en datos que podemos utilizar mediante los modelos (deserialize)
 
@@ -242,13 +242,13 @@ class ProductSerializer(serializers.ModelSerializer):
 
     # podemos crear una función que valide los datos que vienen del front o enviamos
     def validate_price(self, value):
-        if value < 0:
+        if value <= 0:
             # raise es un return para errores
             raise serializers.ValidationError('El precio tiene que ser mayor que 0')
         return value
 ```
 
-## Product view (basic)
+## View function for Product
 
 ```py3
 from django.http import JsonResponse
@@ -266,7 +266,7 @@ def product_list(request):
         })
 ```
 
-## Product url (basic)
+## Urls for Product
 
 En `api` creamos el archivo `urls.py`
 
@@ -293,7 +293,7 @@ urlpatterns = [
 ]
 ```
 
-## Api view with response
+## Api view with response object
 
 ```py3
 # from django.http import JsonResponse
