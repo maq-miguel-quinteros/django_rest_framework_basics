@@ -351,9 +351,11 @@ urlpatterns = [
 ]
 ```
 
-# Serializer
+# Nested Serializers, SerializerMethodField and Serializer Relations
 
-## Models
+## Nested serializer
+
+### Model & serializer
 
 En `api` editamos `models.py`
 
@@ -364,7 +366,7 @@ class OrderItem(models.Model):
     order = models.ForeignKey(
             Order, 
             on_delete=models.CASCADE,
-            # mediante related_name indicamos de que forma puede llamarse este campo en un serializer relacionado con el modelo Order al que hace referencia esta configuración
+            # related_name: indica como puede llamarse este campo desde un serializer
             related_name='items'
         )
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
@@ -372,8 +374,6 @@ class OrderItem(models.Model):
 
 #...
 ```
-
-## Nested serializers (serializer anidados)
 
 Configuramos el serializer para el modelo `Order`. Este tiene un atributo `products` que está relacionado con el modelo `OrderItem`. Configuramos el serializer anidado para este par de modelos. En `api` editamos `serializers.py`
 
@@ -388,9 +388,12 @@ class OrderItemSerializer(serializers.ModelSerializer):
         model = OrderItem
         fields = ('product', 'quantity')
 
-
+# OrderSerializer, en su field items, va a mostrar instancias de OrderItemSerializer
 class OrderSerializer(serializers.ModelSerializer):
-    # anidamos el OrderItemSerializer dentro de OrderSerializer. Traemos los registros del modelo OrderItem. Para establecer la coincidencia el nombre del atributo items tiene que coincidir con el related_name='items' del modelo OrderItem. Ya que el modelo desde donde traemos los datos es Order, en OrderItem configuramos la ForeignKey Order
+    # anidamos el OrderItemSerializer dentro de OrderSerializer.
+    # Traemos los registros del modelo OrderItem de su atributo order
+    # Para establecer la coincidencia el nombre del atributo items tiene que coincidir con el related_name='items' del modelo OrderItem.
+    # Ya que el modelo desde donde traemos los datos es Order, en OrderItem configuramos la ForeignKey Order
     items = OrderItemSerializer(many=True, read_only=True)
     class Meta:
         model = Order
@@ -398,7 +401,7 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = ('order_id', 'created_at', 'user', 'status', 'items')
 ```
 
-## Views
+### Views & urls
 
 En `api` editamos `views.py`
 

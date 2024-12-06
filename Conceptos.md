@@ -1,8 +1,8 @@
 ## Conventions
 
 
-* `GET` de muchos elementos: `class` o `def` + `<model_name>_list`
-* `GET` de un solo elemento: `class` o `def` + `<model_name>_details`
+* `GET` de muchos elementos: `class` o `def` + `<model_name>_list`, ej. `order_list`. En urls `orders\`
+* `GET` de un solo elemento: `class` o `def` + `<model_name>_details`, ej. order_details. en urls `orders\<int:pk>\`
 
 ## Models
 
