@@ -331,8 +331,11 @@ def product_list(request):
 
 
 @api_view(['GET'])
+# pk: id que pasamos como parámetro en el navegador
 def product_details(request, pk):
+    # get_object_or_404: devuelve error 404 de forma automática si no encuentra el Product con id=pk
     product = get_object_or_404(Product, pk=pk)
+    # serializa solo un objeto Product
     serializer = ProductSerializer(product)
     return Response(serializer.data)
 ```
@@ -448,15 +451,18 @@ from .models import Product, Order, OrderItem
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
 
-    # creamos un atributo que vamos a asignar con lo que devuelva el método que pasamos como mediante SerializerMethodField. Podemos pasar el método entre los () o podemos llamar al método get_NOMBRE_MÉTODO y django va a interpretar que este el el método que asignará valores al atributo
+    # creamos un atributo que vamos a asignar con lo que devuelva el método que pasamos mediante SerializerMethodField.
+    # Podemos pasar el método entre los () o 
+    # podemos llamar al método get_NOMBRE_MÉTODO y django va a interpretar que este el el método que asignará valores al atributo
     total_price = serializers.SerializerMethodField()
 
     # definimos la función que va a utilizar SerializerMethodField para dar valor a total_price
     def get_total_price(self, obj):
         # obj es la consulta que estamos realizando en ese momento mediante el serializer
+        # en este caso obj es el modelo Order. El modelo Order tiene un atributo con related_name = items
         order_items = obj.items.all()
         # subtotal es un atributo que generamos en el modelo OrderItem
-        return sum(order_item.subtotal for order_item in order_items)
+        return sum(order_item.item_subtotal for order_item in order_items)
 
     class Meta:
         model = Order
@@ -464,7 +470,7 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = ('order_id', 'created_at', 'user', 'status', 'items', 'total_price')
 ```
 
-## Nested Serializer for Product
+## Nested Serializer without related_name
 
 En `api` editamos `serializer.py`
 
@@ -475,12 +481,66 @@ from .models import Product, Order, OrderItem
 #...
 
 class OrderItemSerializer(serializers.ModelSerializer):
-    # va a traer los productos que coincidan con la consulta, ya que en el modelo OrderItem tenemos un atributo product que tiene configurada una ForeignKey del modelo Product, es decir, no tenemos que usar el parámetro related_name para este caso 
+    # va a traer los productos que coincidan con la consulta
+    # en el modelo OrderItem tenemos un atributo product que tiene configurada una ForeignKey del modelo Product
+    # no tenemos que usar el parámetro related_name para este caso 
     product = ProductSerializer()
     class Meta:
         model = OrderItem
-        # por defecto solo mostraba el id del producto, ahora que configuramos fuera de meta un atributo product con lo que devuelve el serializer, va a traer esos datos
+        # por defecto solo mostraba el id del producto
+        # configuramos fuera de meta un atributo product con lo que devuelve el serializer
         fields = ('product', 'quantity')
 
 #...
+```
+
+## Adding model properties to serializer
+
+```py3
+from rest_framework import serializers
+from .models import Product, Order, OrderItem
+
+#...
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    # configuramos de forma explicita los atributos que necesitamos del producto para mostrar
+    # product.name: el modelo OrderItem tiene un atributo product que refiere al modelo de Product
+    product_name = serializers.CharField(source='product.name')
+    product_price = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        source='product.price')
+
+    class Meta:
+        model = OrderItem
+        fields = ('product_name ', 'product_price', 'quantity', 'item_subtotal')
+
+#...
+```
+
+* `PrimaryKeyRelatedField`: permite mostrar el id del modelo de la relación
+* `StringRelatedField`: permite mostrar en la respuesta del serializer lo que devuelve el método `__str__`.
+* `HyperlinkedRelatedField`: permite establecer un link a una vista para los objetos de la relación
+
+# Serializer subclasses and Aggregated API data
+
+Editamos `serializers.py` en `api`
+
+```py3
+from rest_framework import serializers
+from .models import Product, Order, OrderItem
+
+#...
+
+# heredamos de Serializer en lugar de ModelSerializer
+class ProductInfoSerializer(serializers.Serializer):
+    products = ProductSerializer(many=True)
+    count = serializers.IntegerField()
+    max_price = serializers.FloatField()
+```
+
+Editamos `views.py` en `api`
+
+```py3
+
 ```

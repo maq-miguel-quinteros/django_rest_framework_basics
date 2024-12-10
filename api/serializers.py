@@ -25,11 +25,20 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class OrderItemSerializer(serializers.ModelSerializer):
     # va a traer los productos que coincidan con la consulta, ya que en el modelo OrderItem tenemos un atributo product que tiene configurada una ForeignKey del modelo Product, es decir, no tenemos que usar el parámetro related_name para este caso 
-    product = ProductSerializer()
+    # product = ProductSerializer()
+
+    # configuramos de forma explicita los atributos que necesitamos del producto para mostrar
+    # product.name: el modelo OrderItem tiene un atributo product que refiere al modelo de Product
+    product_name = serializers.CharField(source='product.name')
+    product_price = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        source='product.price')
+
     class Meta:
         model = OrderItem
         # por defecto solo mostraba el id del producto, ahora que configuramos fuera de meta un atributo product con lo que devuelve el serializer, va a traer esos datos
-        fields = ('product', 'quantity')
+        fields = ('product_name ', 'product_price', 'quantity', 'item_subtotal')
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -50,3 +59,9 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         # agregamos a los fields propios del modelo el field items que creamos arriba
         fields = ('order_id', 'created_at', 'user', 'status', 'items', 'total_price')
+
+# heredamos de Serializer en lugar de ModelSerializer
+class ProductInfoSerializer(serializers.Serializer):
+    products = ProductSerializer(many=True)
+    count = serializers.IntegerField()
+    max_price = serializers.FloatField()

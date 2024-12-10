@@ -111,6 +111,7 @@ class ProductSerializer(serializers.Serializer):
 
     # validate_price: función que valida los datos que vienen del front
     # django de forma automática va a correr este método para el atributo price
+    # validate_<propiedad>: valida los datos de <propiedad>. Se puede hacer con cualquier propiedadº
     def validate_price(self, value):
         if value < 0:
             # raise es un return para errores
