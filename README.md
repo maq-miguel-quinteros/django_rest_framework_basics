@@ -542,5 +542,40 @@ class ProductInfoSerializer(serializers.Serializer):
 Editamos `views.py` en `api`
 
 ```py3
+from django.db.models import Max
 
+#...
+
+@api_view(['GET'])
+def product_info(request):
+    products = Product.objects.all()
+    # pasamos al serializer genérico ProductInfoSerializer los datos con los que debe generar su respuesta
+    serializer = ProductInfoSerializer({
+        # mediante products indicamos crear el serializer anidado 
+        'products': products,
+        # len cuenta la cantidad de objetos product que trae el query Product.objects.all()
+        'count': len(products),
+        # aggregate: agrega el campo que componemos dentro del paréntesis a los objetos en products
+        # max_price=Max('price'): Max devuelve el valor máximo de la columna price de la DB y lo asigna a max_price
+        # ['max_price']: el nombre que va a tener el campo que agregamos, no tiene que coincidir con max_price=Max...
+        'max_price': products.aggregate(max_price=Max('price'))['max_price']
+    })
+    return Response(serializer.data)
+
+#...
+```
+
+Editamos `urls.py` en `api`
+
+```py3
+from django.urls import path
+from . import views
+
+
+urlpatterns = [
+    path('products/', views.product_list),
+    path('products/info/', views.product_info),
+    path('products/<int:pk>/', views.product_details),
+    path('orders/', views.order_list),
+]
 ```
