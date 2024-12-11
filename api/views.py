@@ -4,33 +4,30 @@ from api.serializers import ProductSerializer, OrderSerializer, OrderItemSeriali
 from api.models import Product, Order, OrderItem
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
+from rest_framework import generics
+
+# generics.ListAPIView: heredamos de la clase ListAPIView, preparada para devolver un listado elementos de la DB
+class ProductListAPIView(generics.ListAPIView):
+    # queryset: la búsqueda que va a realizar en la DB
+    queryset = Product.objects.all()
+    # serializer_class: el serializer que va a utilizar la vista
+    serializer_class = ProductSerializer
+
+# generics.RetrieveAPIView: heredamos de la clase RetrieveAPIView
+# por defecto va a tomar el parámetro pk que viene en la llamada /products/<int:pk>
+# y va a devolver esa instancia buscando en Product.objects.all()
+class ProductDetailAPIView(generics.RetrieveAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    # podemos sobre escribir los atributos
+    # lookup_field: si no se sobre escribe es pk. La clase va a generar la búsqueda a partir de este atributo
+    # lookup_url_kwarg: el valor en la url que hace la consulta, por defecto es pk.
+    lookup_url_kwarg = 'product_id'
 
 
-@api_view(['GET'])
-def product_list(request):
-    products = Product.objects.all()
-    serializer = ProductSerializer(products, many=True)
-    return Response(serializer.data)
-
-
-@api_view(['GET'])
-def product_details(request, pk):
-    product = get_object_or_404(Product, pk=pk)
-    serializer = ProductSerializer(product)
-    return Response(serializer.data)
-
-
-@api_view(['GET'])
-def order_list(request):
-    # prefetch_related('items'): en su modelo Order tiene un campo products que lo relaciona con el modelo Products
-    # está relación se establece mediante el modelo OrderItem que tiene un campo order
-    # este campo order tiene se asigna mediante un ForeignKey con un related_name='items'
-    # prefetch_related va a hacer la consulta para todas las order que sean un items del modelo OrderItem
-    # está forma de traer los datos reduce la cantidad de consultas a la DB al relacionar la orden con los items
-    # que (modelo OrderItem) que le corresponden
-    orders = Order.objects.prefetch_related('items').all()
-    serializer = OrderSerializer(orders, many=True)
-    return Response(serializer.data)
+class OrderListAPIView(generics.ListAPIView):
+    queryset = Order.objects.prefetch_related('items__product')
+    serializer_class = OrderSerializer
 
 
 @api_view(['GET'])

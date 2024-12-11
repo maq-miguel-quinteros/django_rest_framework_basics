@@ -645,3 +645,99 @@ def order_list(request):
 
 #...
 ```
+
+Mejoramos más las consultas
+
+```py3
+#...
+
+@api_view(['GET'])
+def order_list(request):
+    # ('items__product'): vamos a traer, de los items, los productos que estén relacionados a la orden
+    # El modelo Order tiene instancias del modelo Product en su atributo products mediante el modelo OrderItem
+    # El modelo OrderItem relaciona Order y Product mediante sus ForeignKey
+    # En el caso del atributo order del modelo OrderItem indicamos que el related_name='items'
+    # Al llamar a items__product indicamos que para cada order id de sus items devuelva lor products relacionados
+    # all() no es necesario después de prefetch_related
+    orders = Order.objects.prefetch_related('items__product')
+    serializer = OrderSerializer(orders, many=True)
+    return Response(serializer.data)
+
+#...
+```
+
+# Generic Views | ListAPIView & RetrieveAPIView
+
+Mediante las vistas genéricas podemos crear vistas asignando valores a atributos de clases que sobre escribimos. Estas vistas genéricas se encargan de hacer el CRUD hacia la base de datos. 
+
+## ListAPIView (GET)
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+
+from rest_framework import generics
+
+# generics.ListAPIView: heredamos de la clase ListAPIView, preparada para devolver un listado elementos de la DB
+class ProductListAPIView(generics.ListAPIView):
+    # queryset: la búsqueda que va a realizar en la DB
+    queryset = Product.objects.all()
+    # serializer_class: el serializer que va a utilizar la vista
+    serializer_class = ProductSerializer
+
+#...
+```
+
+Editamos `urls.py` en `api`
+
+```py3
+from django.urls import path
+from . import views
+
+
+urlpatterns = [
+    path('products/', views.ProductListAPIView.as_view()),
+    path('products/info/', views.product_info),
+    path('products/<int:pk>/', views.product_details),
+    path('orders/', views.order_list),
+]
+```
+
+## RetrieveAPIView (GET)
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+
+# generics.RetrieveAPIView: heredamos de la clase RetrieveAPIView
+# por defecto va a tomar el parámetro pk que viene en la llamada /products/<int:pk>
+# y va a devolver esa instancia buscando en Product.objects.all()
+class ProductDetailAPIView(generics.RetrieveAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    # podemos sobre escribir los atributos
+    # lookup_field: si no se sobre escribe es pk. La clase va a generar la búsqueda a partir de este atributo
+    # lookup_url_kwarg: el valor en la url que hace la consulta, por defecto es pk.
+    lookup_url_kwarg = 'product_id'
+
+#...
+```
+
+Editamos `urls.py` en `api`
+
+```py3
+from django.urls import path
+from . import views
+
+
+urlpatterns = [
+    path('products/', views.ProductListAPIView.as_view()),
+    path('products/info/', views.product_info),
+    path('products/<int:product_id>/', views.ProductDetailAPIView.as_view()),
+    path('orders/', views.OrderListAPIView.as_view()),
+]
+```
+
+# Dynamic Filtering | Overriding get_queryset() method
