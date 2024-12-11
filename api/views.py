@@ -22,7 +22,13 @@ def product_details(request, pk):
 
 @api_view(['GET'])
 def order_list(request):
-    orders = Order.objects.all()
+    # prefetch_related('items'): en su modelo Order tiene un campo products que lo relaciona con el modelo Products
+    # está relación se establece mediante el modelo OrderItem que tiene un campo order
+    # este campo order tiene se asigna mediante un ForeignKey con un related_name='items'
+    # prefetch_related va a hacer la consulta para todas las order que sean un items del modelo OrderItem
+    # está forma de traer los datos reduce la cantidad de consultas a la DB al relacionar la orden con los items
+    # que (modelo OrderItem) que le corresponden
+    orders = Order.objects.prefetch_related('items').all()
     serializer = OrderSerializer(orders, many=True)
     return Response(serializer.data)
 

@@ -38,7 +38,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
         # por defecto solo mostraba el id del producto, ahora que configuramos fuera de meta un atributo product con lo que devuelve el serializer, va a traer esos datos
-        fields = ('product_name ', 'product_price', 'quantity', 'item_subtotal')
+        fields = ('product_name', 'product_price', 'quantity', 'item_subtotal')
 
 
 class OrderSerializer(serializers.ModelSerializer):

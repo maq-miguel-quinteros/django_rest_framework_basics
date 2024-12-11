@@ -583,7 +583,9 @@ urlpatterns = [
 # django-silk for Profiling and Optimization with Django REST Framework
 
 
-Instalamos el paquete `django-silk` que vamos a utilizar para analizar los query que mandamos a la API
+## Install `django-silk`
+
+Instalamos el paquete `django-silk` que vamos a utilizar para analizar los query que mandamos a la API. Este complemento nos muestra todos los llamados que hacemos a la API y cuantas consultas a la DB hace ese llamado. Esto nos permite optimizar las consultas a la DB, editando las views para que la query sea mas precisa y requiera menos consultas a la DB
 
 ```shellscript
 pip install django-silk
@@ -605,6 +607,41 @@ MIDDLEWARE = [
     #...
     'seda.middleware.SilkyMiddleware',
 ]
+
+#...
+```
+
+Editamos `urls.py` en `backend`
+
+```py3
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('api.urls')),
+    path('silk/', include('silk.urls', namespace='silk')),
+]
+```
+
+## Profiling (análisis de rendimiento de software)
+
+Mediante el complemento `django-silk` observamos que la vista `/orders/` realiza más de 10 consultas a la DB. Editamos `views.py` en `api` para corregir eso
+
+```py3
+#...
+
+@api_view(['GET'])
+def order_list(request):
+    # prefetch_related('items'): en su modelo Order tiene un campo products que lo relaciona con el modelo Products
+    # está relación se establece mediante el modelo OrderItem que tiene un campo order
+    # este campo order tiene se asigna mediante un ForeignKey con un related_name='items'
+    # prefetch_related va a hacer la consulta para todas las order que sean un items del modelo OrderItem
+    # está forma de traer los datos reduce la cantidad de consultas a la DB al relacionar la orden con los items
+    # que (modelo OrderItem) que le corresponden
+    orders = Order.objects.prefetch_related('items').all()
+    serializer = OrderSerializer(orders, many=True)
+    return Response(serializer.data)
 
 #...
 ```
