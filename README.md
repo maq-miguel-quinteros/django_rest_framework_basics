@@ -579,3 +579,32 @@ urlpatterns = [
     path('orders/', views.order_list),
 ]
 ```
+
+# django-silk for Profiling and Optimization with Django REST Framework
+
+
+Instalamos el paquete `django-silk` que vamos a utilizar para analizar los query que mandamos a la API
+
+```shellscript
+pip install django-silk
+```
+
+Editamos `settings.py` en `backend`
+
+```py3
+#...
+
+INSTALLED_APPS = [
+    #...
+    'rest_framework',
+    'api',
+    'silk' ,
+]
+
+MIDDLEWARE = [
+    #...
+    'seda.middleware.SilkyMiddleware',
+]
+
+#...
+```
