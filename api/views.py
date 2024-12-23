@@ -9,7 +9,8 @@ from rest_framework import generics
 # generics.ListAPIView: heredamos de la clase ListAPIView, preparada para devolver un listado elementos de la DB
 class ProductListAPIView(generics.ListAPIView):
     # queryset: la búsqueda que va a realizar en la DB
-    queryset = Product.objects.all()
+    # stock__gt=0: indicamos que filtre los elementos del modelo Product que tengan el atributo stock mayor a 0
+    queryset = Product.objects.filter(stock__gt=0)
     # serializer_class: el serializer que va a utilizar la vista
     serializer_class = ProductSerializer
 

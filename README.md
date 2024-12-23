@@ -686,6 +686,11 @@ class ProductListAPIView(generics.ListAPIView):
     # serializer_class: el serializer que va a utilizar la vista
     serializer_class = ProductSerializer
 
+
+class OrderListAPIView(generics.ListAPIView):
+    queryset = Order.objects.prefetch_related('items__product')
+    serializer_class = OrderSerializer
+
 #...
 ```
 
@@ -699,8 +704,8 @@ from . import views
 urlpatterns = [
     path('products/', views.ProductListAPIView.as_view()),
     path('products/info/', views.product_info),
-    path('products/<int:pk>/', views.product_details),
-    path('orders/', views.order_list),
+    path('products/<int:product_id>/', views.ProductDetailAPIView.as_view()),
+    path('orders/', views.OrderListAPIView.as_view()),
 ]
 ```
 
@@ -738,6 +743,19 @@ urlpatterns = [
     path('products/<int:product_id>/', views.ProductDetailAPIView.as_view()),
     path('orders/', views.OrderListAPIView.as_view()),
 ]
+```
+
+## Changing base queryset
+
+```py3
+#...
+
+class ProductListAPIView(generics.ListAPIView):
+    # stock__gt=0: indicamos que filtre los elementos del modelo Product que tengan el atributo stock mayor a 0
+    queryset = Product.objects.filter(stock__gt=0)
+    serializer_class = ProductSerializer
+
+#...
 ```
 
 # Dynamic Filtering | Overriding get_queryset() method
