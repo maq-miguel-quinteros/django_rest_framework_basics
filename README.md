@@ -759,3 +759,39 @@ class ProductListAPIView(generics.ListAPIView):
 ```
 
 # Dynamic Filtering | Overriding get_queryset() method
+
+Si queremos que una consulta esté ligada al usuario autenticado en ese momento necesitamos sobre escribir el `queryset`. Esto lo hacemos mediante el método `get_queryset`. Tenemos que sobrescribir esté atributo por que, mediante el atributo `queryset` no tenemos acceso al request de la llamada. Para poder generar un filtro dinámico de los objetos que vamos a mostrar necesitamos acceder a los datos de la llamada que vienen en el request.
+
+## Registering models with admin and creating Inline
+
+Registramos el modelo en el administrador de django para poder generar elementos desde ahí. Creamos el superuser mediante el comando
+
+
+
+```shellscript
+python manage.py createsuperuser
+```
+
+Editamos `admin.py` en `api`.
+
+```py3
+from django.contrib import admin
+from models import Order, OrderItem
+
+
+# TabularInline: permite adjuntar objetos relacionados a otros objetos cuando los creamos de forma dinámica
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+
+# OrderAdmin: mediante esta clase vamos a integrar los modelos de Order y OrderItem al admin de django
+class OrderAdmin(admin.ModelAdmin):
+    # inlines: indicamos, o en este caso sumamos, columnas al modelo Order, lo que sumamos es OrderItem
+    inlines = [
+        OrderItemInline
+    ]
+
+# admin.site.register: registra en el sitio de admin el modelo Order mediante la clase OrderAdmin
+admin.site.register(Order, OrderAdmin)
+```
+
+## Dynamically filtering queryset with get_queryset() method
