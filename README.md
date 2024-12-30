@@ -795,3 +795,70 @@ admin.site.register(Order, OrderAdmin)
 ```
 
 ## Dynamically filtering queryset with get_queryset() method
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+
+# UserOrderListAPIView: ordenes de un usuario específico
+class UserOrderListAPIView(generics.ListAPIView):
+    queryset = Order.objects.prefetch_related('items__product')
+    serializer_class = OrderSerializer
+
+    def get_queryset(self):
+        # super().get_queryset(): traemos el contenido del atributo queryset de arriba
+        qs = super().get_queryset()
+        # filter(user=self.request.user): filtramos qs pasando como parámetro de filtro el usuario logueado
+        # user=self.request.user: mediante self podemos acceder al request y de ahí al user de ese request
+        return qs.filter(user=self.request.user)
+
+#...
+```
+
+Editamos `urls.py` en `api`
+
+```py3
+from django.urls import path
+from . import views
+
+
+urlpatterns = [
+    path('products/', views.ProductListAPIView.as_view()),
+    path('products/info/', views.product_info),
+    path('products/<int:product_id>/', views.ProductDetailAPIView.as_view()),
+    path('orders/', views.OrderListAPIView.as_view()),
+    path('user-orders/', views.UserOrderListAPIView.as_view()),
+]
+```
+
+# Permissions and Testing Permissions
+
+Configuramos django para que, en ciertas vistas, solo usuarios autenticados puedan ver los datos que corresponden a ese usuario
+
+## Permissions 
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+
+from rest_framework.permissions import IsAuthenticated
+
+#...
+
+class UserOrderListAPIView(generics.ListAPIView):
+    queryset = Order.objects.prefetch_related('items__product')
+    serializer_class = OrderSerializer
+    # permission_classes: permite establecer los permisos para consultar la view
+    # IsAuthenticated: solo permite realizar la consulta a usuarios autenticados
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = super().get_queryset()        
+        return qs.filter(user=self.request.user)
+    
+#...
+```
+
+##  Testing API permissions with Django TestCase

@@ -5,6 +5,7 @@ from api.models import Product, Order, OrderItem
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
 
 # generics.ListAPIView: heredamos de la clase ListAPIView, preparada para devolver un listado elementos de la DB
 class ProductListAPIView(generics.ListAPIView):
@@ -29,6 +30,21 @@ class ProductDetailAPIView(generics.RetrieveAPIView):
 class OrderListAPIView(generics.ListAPIView):
     queryset = Order.objects.prefetch_related('items__product')
     serializer_class = OrderSerializer
+
+# UserOrderListAPIView: ordenes de un usuario específico
+class UserOrderListAPIView(generics.ListAPIView):
+    queryset = Order.objects.prefetch_related('items__product')
+    serializer_class = OrderSerializer
+    # permission_classes: permite establecer los permisos para consultar la view
+    # IsAuthenticated: solo permite realizar la consulta a usuarios autenticados
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # super().get_queryset(): traemos el contenido del atributo queryset de arriba
+        qs = super().get_queryset()
+        # filter(user=self.request.user): filtramos qs pasando como parámetro de filtro el usuario logueado
+        # user=self.request.user: mediante self podemos acceder al request y de ahí al user de ese request
+        return qs.filter(user=self.request.user)
 
 
 @api_view(['GET'])

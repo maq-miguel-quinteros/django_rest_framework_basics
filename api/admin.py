@@ -1,5 +1,5 @@
 from django.contrib import admin
-from models import Order, OrderItem
+from .models import Order, OrderItem
 
 
 # TabularInline: permite adjuntar objetos relacionados a otros objetos cuando los creamos de forma dinámica
