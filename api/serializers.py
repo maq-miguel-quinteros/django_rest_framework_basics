@@ -5,10 +5,10 @@ from .models import Product, Order, OrderItem
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        # para saber el tipo de dato de cada elemento de fields se basa en el model, es decir, para name el tipo de datos es models.CharField
         fields = (
-            # es un campo que viene implícito en models.Model, por eso no se declara en el modelo Product
-            'id',
+            # quitamos el field id y agregamos description
+            # esta modificación también cambia lo que devuelven los endpoint get
+            'description',
             'name',
             'description',
             'price',

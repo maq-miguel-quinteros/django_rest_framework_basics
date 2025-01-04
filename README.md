@@ -980,3 +980,75 @@ urlpatterns = [
     path('user-orders/', views.UserOrderListAPIView.as_view(), name='user-orders'),
 ]
 ```
+
+# Creating Data | ListCreateAPIView and Generic View Internals
+
+## Creating data with CreateAPIView (POST)
+
+Podemos utilizar el serializer ya creado para una llamada GET con el field `id` y generar un nuevo serializer para la llamada POST con el field `description` (que necesitamos para crear un nuevo elemento). En lugar de eso vamos a modificar el serializer para no generar uno nuevo.
+
+Editamos `serializers.py` en `api`
+
+```py3
+#...
+
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = (
+            # quitamos el field id y agregamos description
+            # esta modificación también cambia lo que devuelven los endpoint get
+            'description',
+            'name',
+            'description',
+            'price',
+            'stock',            
+        )
+    def validate_price(self, value):
+        if value < 0:
+            raise serializers.ValidationError('El precio tiene que ser mayor que 0')
+        return value
+
+#...
+```
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+
+class ProductListAPIView(generics.ListAPIView):
+    # volvemos a traer todos los objetos a esta vista
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    
+
+# generics.CreateAPIView: heredamos de la clase CreateAPIView, preparada para crear un elemento en la DB
+class ProductCreateAPIView(generics.CreateAPIView):
+    # model: el modelo de base para crear el nuevo elemento
+    model = Product
+    # editamos el serializer ProductSerializer para que tenga entre sus fields description
+    # description es necesario para poder dar de alta un elemento
+    serializer_class = ProductSerializer
+
+#...
+```
+
+Editamos `urls.py` en `api`
+
+```py3
+from django.urls import path
+from . import views
+
+
+urlpatterns = [
+    path('products/', views.ProductListAPIView.as_view()),
+    path('products/create/', views.ProductCreateAPIView.as_view()),
+    path('products/info/', views.ProductInfoAPIView.as_view()),
+    path('products/<int:product_id>/', views.ProductDetailAPIView.as_view()),
+    path('orders/', views.OrderListAPIView.as_view()),
+    path('user-orders/', views.UserOrderListAPIView.as_view(), name='user-orders'),
+]
+```
+
+## ListCreateAPIView (GET, POST)

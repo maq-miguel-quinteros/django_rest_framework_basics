@@ -8,13 +8,21 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-# generics.ListAPIView: heredamos de la clase ListAPIView, preparada para devolver un listado elementos de la DB
+
 class ProductListAPIView(generics.ListAPIView):
-    # queryset: la búsqueda que va a realizar en la DB
-    # stock__gt=0: indicamos que filtre los elementos del modelo Product que tengan el atributo stock mayor a 0
-    queryset = Product.objects.filter(stock__gt=0)
-    # serializer_class: el serializer que va a utilizar la vista
+    # volvemos a traer todos los objetos a esta vista
+    queryset = Product.objects.all()
     serializer_class = ProductSerializer
+
+
+# generics.CreateAPIView: heredamos de la clase CreateAPIView, preparada para crear un elemento en la DB
+class ProductCreateAPIView(generics.CreateAPIView):
+    # model: el modelo de base para crear el nuevo elemento
+    model = Product
+    # editamos el serializer ProductSerializer para que tenga entre sus fields description
+    # description es necesario para poder dar de alta un elemento
+    serializer_class = ProductSerializer
+
 
 # generics.RetrieveAPIView: heredamos de la clase RetrieveAPIView
 # por defecto va a tomar el parámetro pk que viene en la llamada /products/<int:pk>
