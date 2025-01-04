@@ -8,12 +8,12 @@ from rest_framework import status
 class UserOrderTestClass(TestCase):
     # setUp: configuramos las variables que van a generarse en el test para poder realizarlo
     def setUp(self):
-        user1 = User.object.create_user(username='user1', password='test')
-        user2 = User.object.create_user(username='user2', password='test')
-        Order.object.create(user=user1, total_amount='44.44')
-        Order.object.create(user=user1, total_amount='66.44')
-        Order.object.create(user=user2, total_amount='22.44')
-        Order.object.create(user=user2, total_amount='11.44')
+        user1 = User.objects.create_user(username='user1', password='test')
+        user2 = User.objects.create_user(username='user2', password='test')
+        Order.objects.create(user=user1)
+        Order.objects.create(user=user1)
+        Order.objects.create(user=user2)
+        Order.objects.create(user=user2)
     
     # definimos lo que va a hacer el test
     def test_user_order_endpoint_retrieves_only_authenticated_user_orders(self):

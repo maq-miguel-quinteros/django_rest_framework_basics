@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 
 # generics.ListAPIView: heredamos de la clase ListAPIView, preparada para devolver un listado elementos de la DB
 class ProductListAPIView(generics.ListAPIView):
@@ -47,18 +48,19 @@ class UserOrderListAPIView(generics.ListAPIView):
         return qs.filter(user=self.request.user)
 
 
-@api_view(['GET'])
-def product_info(request):
-    products = Product.objects.all()
-    # pasamos al serializer genérico ProductInfoSerializer los datos con los que debe generar su respuesta
-    serializer = ProductInfoSerializer({
-        # mediante products indicamos crear el serializer anidado 
-        'products': products,
-        # len cuenta la cantidad de objetos product que trae el query Product.objects.all()
-        'count': len(products),
-        # aggregate: agrega el campo que componemos dentro del paréntesis a los objetos en products
-        # max_price=Max('price'): Max devuelve el valor máximo de la columna price de la DB y lo asigna a max_price
-        # ['max_price']: el nombre que va a tener el campo que agregamos, no tiene que coincidir con max_price=Max...
-        'max_price': products.aggregate(max_price=Max('price'))['max_price']
-    })
-    return Response(serializer.data)
+# def get(): definimos el método get para métodos HTTP GET
+class ProductInfoAPIView(APIView):
+    def get(self, request):
+        products = Product.objects.all()
+            # pasamos al serializer genérico ProductInfoSerializer los datos con los que debe generar su respuesta
+        serializer = ProductInfoSerializer({
+            # mediante products indicamos crear el serializer anidado 
+            'products': products,
+            # len cuenta la cantidad de objetos product que trae el query Product.objects.all()
+            'count': len(products),
+            # aggregate: agrega el campo que componemos dentro del paréntesis a los objetos en products
+            # max_price=Max('price'): Max devuelve el valor máximo de la columna price de la DB y lo asigna a max_price
+            # ['max_price']: el nombre que va a tener el campo que agregamos, no tiene que coincidir con max_price=Max...
+            'max_price': products.aggregate(max_price=Max('price'))['max_price']
+        })
+        return Response(serializer.data)
