@@ -1052,3 +1052,49 @@ urlpatterns = [
 ```
 
 ## ListCreateAPIView (GET, POST)
+
+Utilizamos la misma ruta para crear una instancia (POST) y para listar las instancias (GET). Podemos consultar el funcionamiento de estas clases y sus atributos en la web [cdrf.co](https://www.cdrf.co/)
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+
+# class ProductListAPIView(generics.ListAPIView):
+#     queryset = Product.objects.all()
+#     serializer_class = ProductSerializer
+
+# ListCreateAPIView: la clase que hereda de ListCreateAPIView va a poder manejar
+# llamadas POST para crear una nueva instancia
+# llamadas GET para listar las instancias
+class ProductListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+
+    # es posible editar los métodos list y create que se heredan de ListCreateAPIView
+    # se pueden crear listas personalizadas o altas de objetos personalizados editando estos
+
+
+# class ProductCreateAPIView(generics.CreateAPIView):
+#     model = Product
+#     serializer_class = ProductSerializer
+
+#...
+```
+
+Editamos `urls.py` en `api`
+
+```py3
+from django.urls import path
+from . import views
+
+
+urlpatterns = [
+    path('products/', views.ProductListCreateAPIView.as_view()),
+    # path('products/create/', views.ProductCreateAPIView.as_view()),
+    path('products/info/', views.ProductInfoAPIView.as_view()),
+    path('products/<int:product_id>/', views.ProductDetailAPIView.as_view()),
+    path('orders/', views.OrderListAPIView.as_view()),
+    path('user-orders/', views.UserOrderListAPIView.as_view(), name='user-orders'),
+]
+```

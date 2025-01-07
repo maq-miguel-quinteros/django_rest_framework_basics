@@ -9,19 +9,19 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 
-class ProductListAPIView(generics.ListAPIView):
-    # volvemos a traer todos los objetos a esta vista
+# class ProductListAPIView(generics.ListAPIView):
+#     queryset = Product.objects.all()
+#     serializer_class = ProductSerializer
+
+
+class ProductListCreateAPIView(generics.ListCreateAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
 
 
-# generics.CreateAPIView: heredamos de la clase CreateAPIView, preparada para crear un elemento en la DB
-class ProductCreateAPIView(generics.CreateAPIView):
-    # model: el modelo de base para crear el nuevo elemento
-    model = Product
-    # editamos el serializer ProductSerializer para que tenga entre sus fields description
-    # description es necesario para poder dar de alta un elemento
-    serializer_class = ProductSerializer
+# class ProductCreateAPIView(generics.CreateAPIView):
+#     model = Product
+#     serializer_class = ProductSerializer
 
 
 # generics.RetrieveAPIView: heredamos de la clase RetrieveAPIView
