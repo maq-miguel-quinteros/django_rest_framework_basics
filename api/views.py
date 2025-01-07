@@ -5,7 +5,7 @@ from api.models import Product, Order, OrderItem
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.views import APIView
 
 
@@ -17,6 +17,15 @@ from rest_framework.views import APIView
 class ProductListCreateAPIView(generics.ListCreateAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+
+    # get_permissions: permite modificar el atributo permission_classes de forma dinámica
+    def get_permissions(self):
+        # AllowAny: permisos para cualquier usuario
+        self.permission_classes = [AllowAny]
+        # request.method == 'POST': si el método es POST modificamos permission_classes
+        if self.request.method == 'POST':
+            self.permission_classes = [IsAdminUser]
+        return super().get_permissions()
 
 
 # class ProductCreateAPIView(generics.CreateAPIView):

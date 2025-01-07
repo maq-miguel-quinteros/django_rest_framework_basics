@@ -1098,3 +1098,56 @@ urlpatterns = [
     path('user-orders/', views.UserOrderListAPIView.as_view(), name='user-orders'),
 ]
 ```
+
+# Customizing permissions in Generic Views | VSCode REST Client extension
+
+## VSCode REST Client extension
+
+Editamos los permisos de la clase ProductListCreateAPIView para que cualquier usuario pueda hacer un llamado GET y listar todos los productos, pero que solo usuarios autenticados puedan hacer un llamado POST para crear un nuevo producto.
+
+Para probar los permisos instalamos la extensión de VSCode `rest client`.
+
+Creamos el archivo `api.http` en la carpeta base del proyecto
+
+```http
+GET http://localhost:8000/products/ HTTP/1.1
+
+###
+
+POST http://localhost:8000/products/ HTTP/1.1
+Content-Type: application/json
+
+{
+    "name": "Television",
+    "price": 300.00,
+    "stock": 14,
+    "description": "An amazing new TV"
+}
+```
+
+## Customizing permissions in Generic Views
+
+Al enviar cualquiera de las dos consultas la respuesta es correcta. Necesitamos restringir la consulta POST para que solo usuarios admin puedan dar de alta productos.
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
+
+
+class ProductListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+
+    # get_permissions: permite modificar el atributo permission_classes de forma dinámica
+    def get_permissions(self):
+        # AllowAny: permisos para cualquier usuario
+        self.permission_classes = [AllowAny]
+        # request.method == 'POST': si el método es POST modificamos permission_classes
+        if self.request.method == 'POST':
+            self.permission_classes = [IsAdminUser]
+        return super().get_permissions()
+
+#...
+```
