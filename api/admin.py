@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Order, OrderItem
+from .models import Order, OrderItem, User
 
 
 # TabularInline: permite adjuntar objetos relacionados a otros objetos cuando los creamos de forma dinámica
@@ -15,3 +15,5 @@ class OrderAdmin(admin.ModelAdmin):
 
 # admin.site.register: registra en el sitio de admin el modelo Order mediante la clase OrderAdmin
 admin.site.register(Order, OrderAdmin)
+# agregamos el modelo User a los objetos que pueden editarse desde el panel admin
+admin.site.register(User)

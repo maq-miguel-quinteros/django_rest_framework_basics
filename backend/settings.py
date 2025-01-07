@@ -128,3 +128,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Como configuramos un modelo de usuario personalizado tenemos que declarar el mismo
 AUTH_USER_MODEL = 'api.User'
+
+# Agregamos la configuración de autenticación de rest_frameworks
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        #'rest_framework.authentication.BasicAuthentication',
+        # Quitamos BasicAuthentication para trabajar en su lugar con JWTAuthentication
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ]
+}

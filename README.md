@@ -1110,10 +1110,12 @@ Para probar los permisos instalamos la extensión de VSCode `rest client`.
 Creamos el archivo `api.http` en la carpeta base del proyecto
 
 ```http
+# La solicitud muestra un JSON con todos los productos
 GET http://localhost:8000/products/ HTTP/1.1
 
 ###
 
+# La solicitud da de alta un producto
 POST http://localhost:8000/products/ HTTP/1.1
 Content-Type: application/json
 
@@ -1150,4 +1152,169 @@ class ProductListCreateAPIView(generics.ListCreateAPIView):
         return super().get_permissions()
 
 #...
+```
+
+Cuando volvemos a correr las peticiones HTTP
+
+```http
+# La solicitud muestra un JSON con todos los productos
+GET http://localhost:8000/products/ HTTP/1.1
+
+###
+
+# La solicitud muestra el error "detail": "Authentication credentials were not provided."
+# No estamos logueados como admin para poder hacer el alta
+POST http://localhost:8000/products/ HTTP/1.1
+Content-Type: application/json
+
+{
+    "name": "Television",
+    "price": 300.00,
+    "stock": 14,
+    "description": "An amazing new TV"
+}
+```
+
+# JWT Authentication with djangorestframework
+
+## Setting authentication scheme
+
+Configuramos como vamos a trabajar la autenticación en el proyecto configurando la misma en las settings
+
+Editamos `settings.py` en la carpeta principal del proyecto
+
+```py3
+#...
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+		# autenticación de las llamadas HTTP
+        'rest_framework.authentication.BasicAuthentication',
+		# autenticación basada en sesiones
+		# Es la que usa Django por defecto para trabajar con el panel admin
+        'rest_framework.authentication.SessionAuthentication',
+    ]
+}
+```
+
+### djangorestframework-simplejwt
+
+Podemos realizar la autenticación mediante token, lo que requiere una consulta a la Base de datos. La autenticación mediante JWT (JSON Web Token authentication) no requiere una consulta a la base de datos. Para realizar esto instalamos la librería `djangorestframework-simplejwt`.
+
+```shellscript
+pip install djangorestframework-simplejwt
+```
+
+Editamos settings.py en la carpeta principal del proyecto para agregar `simplejwt`
+
+```py3
+#...
+
+# Agregamos la configuración de autenticación de rest_frameworks
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        #'rest_framework.authentication.BasicAuthentication',
+        # Quitamos BasicAuthentication para trabajar en su lugar con JWTAuthentication
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ]
+}
+```
+
+Tenemos que agregar las rutas de login para este método de autenticación.
+
+Editamos `urls.py` en la carpeta principal del proyecto
+
+```py3
+from django.contrib import admin
+from django.urls import path, include
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
+
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('api.urls')),
+    path('silk/', include('silk.urls', namespace='silk')),
+    # rutas para obtener el token de autenticación y para hacer el refresh del mismo
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+]
+```
+
+Probamos el login mediante simplejwt mediante una llamada al path que configuramos
+
+Editamos `api.http` en la carpeta base del proyecto
+
+```http
+#...
+
+# Hacemos login en la aplicación
+POST http://localhost:8000/api/token/ HTTP/1.1
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "test"
+}
+
+###
+# con el access token que devuelve el llamado anterior damos de alta el producto que antes deba error
+# Esta vez no devuelve error. El token tiene los datos del usuario admin en su encriptado
+# El usuario admin tiene los permisos para crear productos en el path products mediante POST
+POST http://localhost:8000/products/ HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2Mjg4OTQyLCJpYXQiOjE3MzYyODg2NDIsImp0aSI6IjQzOGMzOTdhMTlkNDQ0NDFiOGI3MDQwNDBkNTFjZGJiIiwidXNlcl9pZCI6MX0.NFUbNu02pgF6twrAtG-c8ntbEpSkaspOY8uzlKmOKvA
+
+{
+    "name": "Television",
+    "price": 300.00,
+    "stock": 14,
+    "description": "An amazing new TV"
+}
+```
+
+Editamos el usuario de pruebas para que no tenga permisos de admin, de esta manera podemos probar si usuarios que no tengan esos permisos pueden crear nuevos registros.
+
+Editamos `admin.py` en `api`
+
+```py3
+from django.contrib import admin
+from .models import Order, OrderItem, User
+
+#...
+admin.site.register(Order, OrderAdmin)
+# agregamos el modelo User a los objetos que pueden editarse desde el panel admin
+admin.site.register(User)
+```
+
+El el panel admin aparece ahora el modelo User. Dentro podemos ver que tenemos 2 user, el admin y el que creamos (maq). Editamos el user maq para que no sea un usuario administrador quitando el tilde a la opción `Staff status`. El usuario maq ya no va a poder iniciar sesión en el panel admin.
+
+Al realizar el login y luego tratar de hacer el alta de un producto con el token del usuario maq dará un error. Para probar editamos `api.http` en la carpeta base del proyecto
+
+```py3
+#...
+
+POST http://localhost:8000/api/token/ HTTP/1.1
+Content-Type: application/json
+
+{
+    "username": "maq",
+    "password": "4123"
+}
+
+###
+# dará el error: You do not have permission to perform this action.
+POST http://localhost:8000/products/ HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2MjkyMzQ4LCJpYXQiOjE3MzYyOTIwNDgsImp0aSI6IjlhMjM2NzcxNDY4MDQ3NmZiZTExNzgzOGVmMWU4Y2RjIiwidXNlcl9pZCI6Mn0.5xMJOoRPKdt7fMOnjCXYA1bKtoNdmBGB8cEr6BE0y3A
+
+{
+    "name": "Television",
+    "price": 300.00,
+    "stock": 14,
+    "description": "An amazing new TV"
+}
 ```
