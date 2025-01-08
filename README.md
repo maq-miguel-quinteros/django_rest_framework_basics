@@ -1401,6 +1401,222 @@ class ProductDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 Editamos `api.http` en la carpeta base del proyecto
 
-```py3
+```http
+# Probamos la consulta, modificación y borrado de elementos
 
+# Consulta de un elemento
+GET http://localhost:8000/api/products/1/ HTTP/1.1
+
+###
+
+# Actualización de elemento
+PUT http://localhost:8000/api/products/1/ HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2MjkyMzQ4LCJpYXQiOjE3MzYyOTIwNDgsImp0aSI6IjlhMjM2NzcxNDY4MDQ3NmZiZTExNzgzOGVmMWU4Y2RjIiwidXNlcl9pZCI6Mn0.5xMJOoRPKdt7fMOnjCXYA1bKtoNdmBGB8cEr6BE0y3A
+
+{
+    "name": "Television",
+    "price": 300.00,
+    "stock": 14,
+    "description": "An amazing new TV"
+}
+
+###
+PATCH http://localhost:8000/api/products/1/ HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2MjkyMzQ4LCJpYXQiOjE3MzYyOTIwNDgsImp0aSI6IjlhMjM2NzcxNDY4MDQ3NmZiZTExNzgzOGVmMWU4Y2RjIiwidXNlcl9pZCI6Mn0.5xMJOoRPKdt7fMOnjCXYA1bKtoNdmBGB8cEr6BE0y3A
+
+{
+    "name": "Television",
+    "price": 300.00,
+    "stock": 14,
+    "description": "An amazing new TV"
+}
+
+###
+
+# Borrado del elemento
+DELETE  http://localhost:8000/api/products/1/ HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2MjkyMzQ4LCJpYXQiOjE3MzYyOTIwNDgsImp0aSI6IjlhMjM2NzcxNDY4MDQ3NmZiZTExNzgzOGVmMWU4Y2RjIiwidXNlcl9pZCI6Mn0.5xMJOoRPKdt7fMOnjCXYA1bKtoNdmBGB8cEr6BE0y3A
 ```
+
+# Django REST Framework API Documentation
+
+Para hacer la documentación de forma automática de la API instalamos drf-spectacular (drf: Django Rest Framework).
+
+```shellscript
+pip install drf-spectacular
+```
+
+Editamos `settings.py` en la carpeta principal del proyecto
+
+```py3
+#...
+
+INSTALLED_APPS = [
+	#...
+    'silk',
+	# agregamos la app
+    'drf_spectacular',
+]
+
+#...
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+	# indicamos el esquema como default
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# Agregamos la configuración particular de drf_spectacular
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Product API',
+    'DESCRIPTION': 'Your project description',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # OTHER SETTINGS
+}
+```
+
+Generamos el esquema mediante el siguiente comando
+
+```shellscript
+python manage.py spectacular --color --file schema.yml
+```
+
+Agregamos las rutas donde vamos a poder visualizar la documentación. Si accedemos a la ruta `'api/schema/'` solo descarga el schema. Si accedemos a la ruta `'api/schema/swagger-ui/'` vamos a poder visualizar la documentación de la api que se genera de forma automática con esta librería.
+
+Editamos `urls.py` de la carpeta principal del proyecto
+
+```py3
+from django.contrib import admin
+from django.urls import path, include
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('api.urls')),
+    path('silk/', include('silk.urls', namespace='silk')),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    # agregamos las rutas propias de drf_spectacular
+    # YOUR PATTERNS
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    # Optional UI:
+    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+]
+```
+
+# django-filter and DRF API filtering
+
+Podemos realizar consultas y, a los datos que devolvemos desde la base de datos al front, aplicar un filtro que viene dispuesto desde el front por el usuario.
+
+## Creating django-filter Filter Backend [link](https://www.django-rest-framework.org/api-guide/filtering/#djangofilterbackend)
+
+Instalamos djangoFilterBackend con el siguiente comando
+
+```shellscript
+pip install django-filter
+```
+
+Editamos `settings.py` en la carpeta principal del proyecto
+
+```py3
+#...
+
+INSTALLED_APPS = [
+	#...
+    'drf_spectacular',
+	# agregamos la app de django_filters
+    'django_filters',
+]
+
+#...
+
+REST_FRAMEWORK = {
+	#...
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+	# Configuramos django_filters como el paquete de filtro por defecto
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+}
+
+#...
+```
+
+Tenemos que indicar a las vistas cuales son los fields que van a aceptar filtros.
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+
+class ProductListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    # indicamos que se van a poder realizar filtros sobre los atributos name y price
+    filterset_fields = ('name', 'price')
+
+#...
+```
+
+Para realizar el filtro basta con indicar `api/products/?name=Television`. La consulta nos va a devolver los elementos que, en el atributo name, tengan Television.
+
+Este tipo de filtro solo sirve para búsquedas que igualen el resultado. Es decir, si queremos buscar por el atributo price, pero que sea mayor o menor a 300, no podemos realizar esa búsqueda.
+
+Tampoco podemos buscar por palabras aproximadas. Si buscamos por television en minúsculas no va a traer el producto.
+
+## Defining FilterSet class for more flexible filtering
+
+Para definir filtros mas flexibles creamos un archivo de filtros. Desde la documentación [link](https://django-filter.readthedocs.io/en/latest/guide/usage.html) configuramos el archivo.
+
+Creamos `filters.py` en `api`
+
+```py3
+import django_filters
+from api.models import Product
+
+
+class ProductFilter(django_filters.FilterSet):
+    class Meta:
+        model = Product
+        fields = {
+            # exact: el name tiene que indicar exacto lo que pasamos como filtro
+            # iexact:  igual que el anterior solo que ignora mayúsculas y minúsculas
+            # contains: el name contiene algo de lo indicado en el filtro
+            # icontains: igual que el anterior ignorando mayúsculas y minúsculas            
+            'name': ['iexact', 'icontains'],
+            # lt': menor que, 'gt': mayor que, 'range': en el rango
+            'price': ['exact', 'lt', 'gt', 'range']
+        }
+```
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+from api.filters import ProductFilter
+
+#...
+
+class ProductListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    # filterset_fields = ('name', 'price')
+    # agregamos la clase ProductFilter para el atributo filterset_class de la view
+    filterset_class = ProductFilter
+
+#...
+```
+
+Para consultar, por ejemplo, un precio mayor que, a la llamada la hacemos como `products/?price__gt=100` (dos guiones bajos). Para range hacemos la llamada como `products/?price__range=10.50`, la llamada se hace para el rango entre 10 y 50. Para name podemos indicar `products/?name__icontains=tele`.

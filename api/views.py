@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.views import APIView
+from api.filters import ProductFilter
 
 
 # class ProductListAPIView(generics.ListAPIView):
@@ -17,6 +18,8 @@ from rest_framework.views import APIView
 class ProductListCreateAPIView(generics.ListCreateAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    # filterset_fields = ('name', 'price')
+    filterset_class = ProductFilter
 
     # get_permissions: permite modificar el atributo permission_classes de forma dinámica
     def get_permissions(self):
