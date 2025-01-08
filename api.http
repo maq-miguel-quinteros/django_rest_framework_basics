@@ -57,3 +57,57 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiY
     "stock": 14,
     "description": "An amazing new TV"
 }
+
+###
+# También necesitamos pasar el token para la consulta que muestra las ordenes creadas por el usuario
+GET http://localhost:8000/user-orders/ HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2MjkyMzQ4LCJpYXQiOjE3MzYyOTIwNDgsImp0aSI6IjlhMjM2NzcxNDY4MDQ3NmZiZTExNzgzOGVmMWU4Y2RjIiwidXNlcl9pZCI6Mn0.5xMJOoRPKdt7fMOnjCXYA1bKtoNdmBGB8cEr6BE0y3A
+
+###
+
+# Enviamos el refresh token como parte del body de la consulta
+POST http://localhost:8000/api/token/refresh/ HTTP/1.1
+Content-Type: application/json
+
+{
+    "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2MjkyMzQ4LCJpYXQiOjE3MzYyOTIwNDgsImp0aSI6IjlhMjM2NzcxNDY4MDQ3NmZiZTExNzgzOGVmMWU4Y2RjIiwidXNlcl9pZCI6Mn0.5xMJOoRPKdt7fMOnjCXYA1bKtoNdmBGB8cEr6BE0y3A"
+}
+
+###
+# Probamos la consulta, modificación y borrado de elementos
+
+# Consulta de un elemento
+GET http://localhost:8000/api/products/1/ HTTP/1.1
+
+###
+
+# Actualización de elemento
+PUT http://localhost:8000/api/products/1/ HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2MjkyMzQ4LCJpYXQiOjE3MzYyOTIwNDgsImp0aSI6IjlhMjM2NzcxNDY4MDQ3NmZiZTExNzgzOGVmMWU4Y2RjIiwidXNlcl9pZCI6Mn0.5xMJOoRPKdt7fMOnjCXYA1bKtoNdmBGB8cEr6BE0y3A
+
+{
+    "name": "Television",
+    "price": 300.00,
+    "stock": 14,
+    "description": "An amazing new TV"
+}
+
+###
+PATCH http://localhost:8000/api/products/1/ HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2MjkyMzQ4LCJpYXQiOjE3MzYyOTIwNDgsImp0aSI6IjlhMjM2NzcxNDY4MDQ3NmZiZTExNzgzOGVmMWU4Y2RjIiwidXNlcl9pZCI6Mn0.5xMJOoRPKdt7fMOnjCXYA1bKtoNdmBGB8cEr6BE0y3A
+
+{
+    "name": "Television",
+    "price": 300.00,
+    "stock": 14,
+    "description": "An amazing new TV"
+}
+
+###
+
+# Borrado del elemento
+DELETE  http://localhost:8000/api/products/1/ HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2MjkyMzQ4LCJpYXQiOjE3MzYyOTIwNDgsImp0aSI6IjlhMjM2NzcxNDY4MDQ3NmZiZTExNzgzOGVmMWU4Y2RjIiwidXNlcl9pZCI6Mn0.5xMJOoRPKdt7fMOnjCXYA1bKtoNdmBGB8cEr6BE0y3A

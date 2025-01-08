@@ -1294,7 +1294,7 @@ El el panel admin aparece ahora el modelo User. Dentro podemos ver que tenemos 2
 
 Al realizar el login y luego tratar de hacer el alta de un producto con el token del usuario maq dará un error. Para probar editamos `api.http` en la carpeta base del proyecto
 
-```py3
+```http
 #...
 
 POST http://localhost:8000/api/token/ HTTP/1.1
@@ -1317,4 +1317,90 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiY
     "stock": 14,
     "description": "An amazing new TV"
 }
+
+###
+# También necesitamos pasar el token para la consulta que muestra las ordenes creadas por el usuario
+GET http://localhost:8000/user-orders/ HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2MjkyMzQ4LCJpYXQiOjE3MzYyOTIwNDgsImp0aSI6IjlhMjM2NzcxNDY4MDQ3NmZiZTExNzgzOGVmMWU4Y2RjIiwidXNlcl9pZCI6Mn0.5xMJOoRPKdt7fMOnjCXYA1bKtoNdmBGB8cEr6BE0y3A
+```
+
+## Corregimos los test
+
+Al estar utilizando la autenticación mediante JWT el tipo de respuesta de error de los test que creamos cambia.
+
+Editamos `tests.py` en `api`
+
+```py3
+#...
+
+class UserOrderTestClass(TestCase):
+    def setUp(self):
+        user1 = User.objects.create_user(username='user1', password='test')
+        user2 = User.objects.create_user(username='user2', password='test')
+        Order.objects.create(user=user1)
+        Order.objects.create(user=user1)
+        Order.objects.create(user=user2)
+        Order.objects.create(user=user2)    
+
+    def test_user_order_endpoint_retrieves_only_authenticated_user_orders(self):
+        user = User.objects.get(username='user1')
+        self.client.force_login(user)
+        response = self.client.get(reverse('user-orders'))
+        assert response.status_code == status.HTTP_200_OK
+        orders = response.json()
+        self.assertTrue(all(order['user'] == user.id for order in orders))
+
+    def test_user_order_list_unauthenticated(self):
+        response = self.client.get(reverse('user-orders'))
+        # Cambiamos 403 por 401 ya que la autenticación por JWT que estamos usando devuelve ese error
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+```
+
+# Refresh Tokens & JWT Authentication
+
+El access token tiene un tiempo de vida. Una vez que ese tiempo se termina ese token deja de ser válido. Si necesitamos generar un nuevo access token sin tener que volver a hacer login utilizamos el refresh token.
+
+Editamos `api.http` en la carpeta base del proyecto
+
+```http
+#...
+
+# Enviamos el refresh token como parte del body de la consulta
+POST http://localhost:8000/api/token/refresh/ HTTP/1.1
+Content-Type: application/json
+
+{
+    "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2MjkyMzQ4LCJpYXQiOjE3MzYyOTIwNDgsImp0aSI6IjlhMjM2NzcxNDY4MDQ3NmZiZTExNzgzOGVmMWU4Y2RjIiwidXNlcl9pZCI6Mn0.5xMJOoRPKdt7fMOnjCXYA1bKtoNdmBGB8cEr6BE0y3A"
+}
+```
+
+# Updating & Deleting data
+
+Podemos agrupar todas las acciones que hacen referencia a un solo elemento de la base de datos, estos son, ver el elemento, actualizar el elemento o eliminar el elemento, en un único path de la forma `/products/<int:id>/`. Para esto utilizamos la generic view `RetrieveUpdateDestroyAPIView`. Según el tipo de llamada HTTP que enviemos, GET para consulta, PUT o PATCH para actualizar y DELETE para borrar, la view va a modificar la base de datos. Esto sirve para una única instancia del modelo.
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+
+# Podemos actualizar el nombre de la clase para dejarlo con la convención ProductRetrieveUpdateDestroyAPIView
+class ProductDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    lookup_url_kwarg = 'product_id'
+
+    # agregamos el mismo tipo de autenticación que utilizamos para el alta de productos
+    def get_permissions(self):
+        self.permission_classes = [AllowAny]
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            self.permission_classes = [IsAdminUser]
+        return super().get_permissions()
+
+#...
+```
+
+Editamos `api.http` en la carpeta base del proyecto
+
+```py3
+
 ```

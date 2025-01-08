@@ -33,16 +33,30 @@ class ProductListCreateAPIView(generics.ListCreateAPIView):
 #     serializer_class = ProductSerializer
 
 
-# generics.RetrieveAPIView: heredamos de la clase RetrieveAPIView
-# por defecto va a tomar el parámetro pk que viene en la llamada /products/<int:pk>
-# y va a devolver esa instancia buscando en Product.objects.all()
-class ProductDetailAPIView(generics.RetrieveAPIView):
+# # generics.RetrieveAPIView: heredamos de la clase RetrieveAPIView
+# # por defecto va a tomar el parámetro pk que viene en la llamada /products/<int:pk>
+# # y va a devolver esa instancia buscando en Product.objects.all()
+# class ProductDetailAPIView(generics.RetrieveAPIView):
+#     queryset = Product.objects.all()
+#     serializer_class = ProductSerializer
+#     # podemos sobre escribir los atributos
+#     # lookup_field: si no se sobre escribe es pk. La clase va a generar la búsqueda a partir de este atributo
+#     # lookup_url_kwarg: el valor en la url que hace la consulta, por defecto es pk.
+#     lookup_url_kwarg = 'product_id'
+
+# Podemos actualizar el nombre de la clase para dejarlo con la convención ProductRetrieveUpdateDestroyAPIView
+class ProductDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    # podemos sobre escribir los atributos
-    # lookup_field: si no se sobre escribe es pk. La clase va a generar la búsqueda a partir de este atributo
-    # lookup_url_kwarg: el valor en la url que hace la consulta, por defecto es pk.
     lookup_url_kwarg = 'product_id'
+
+    # agregamos el mismo tipo de autenticación que utilizamos para el alta de productos
+    def get_permissions(self):
+        self.permission_classes = [AllowAny]
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            self.permission_classes = [IsAdminUser]
+        return super().get_permissions()
+
 
 
 class OrderListAPIView(generics.ListAPIView):

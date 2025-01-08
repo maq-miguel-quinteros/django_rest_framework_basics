@@ -35,4 +35,5 @@ class UserOrderTestClass(TestCase):
 
     def test_user_order_list_unauthenticated(self):
         response = self.client.get(reverse('user-orders'))
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # Cambiamos 403 por 401 ya que la autenticación por JWT que estamos usando devuelve ese error
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
