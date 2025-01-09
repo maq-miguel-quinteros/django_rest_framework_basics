@@ -7,19 +7,34 @@ from rest_framework.decorators import api_view
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.views import APIView
-from api.filters import ProductFilter
-
-
-# class ProductListAPIView(generics.ListAPIView):
-#     queryset = Product.objects.all()
-#     serializer_class = ProductSerializer
+from api.filters import ProductFilter, InStockFilterBackend
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
 
 
 class ProductListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Product.objects.all()
+    queryset = Product.objects.order_by('pk')
     serializer_class = ProductSerializer
+    pagination_class = LimitOffsetPagination
+    pagination_class.limit_query_param = 'number'
+    pagination_class.max_limit = 5
+
+    # pagination_class.page_size = 3
+    # pagination_class.page_size_query_param = 'size'
+    # pagination_class.max_page_size = 5
     # filterset_fields = ('name', 'price')
     filterset_class = ProductFilter
+    filter_backends = [
+        DjangoFilterBackend, 
+        filters.SearchFilter,
+        filters.OrderingFilter,
+        InStockFilterBackend
+        ]
+    # =name: las búsquedas que hagamos tiene que coincidir exacto con el valor de name
+    search_fields = ['=name', 'description']
+    # indicamos los fields sobre los cuales podemos ordenar los datos devueltos
+    ordering_fields = ['name', 'price', 'stock']
 
     # get_permissions: permite modificar el atributo permission_classes de forma dinámica
     def get_permissions(self):
@@ -30,22 +45,6 @@ class ProductListCreateAPIView(generics.ListCreateAPIView):
             self.permission_classes = [IsAdminUser]
         return super().get_permissions()
 
-
-# class ProductCreateAPIView(generics.CreateAPIView):
-#     model = Product
-#     serializer_class = ProductSerializer
-
-
-# # generics.RetrieveAPIView: heredamos de la clase RetrieveAPIView
-# # por defecto va a tomar el parámetro pk que viene en la llamada /products/<int:pk>
-# # y va a devolver esa instancia buscando en Product.objects.all()
-# class ProductDetailAPIView(generics.RetrieveAPIView):
-#     queryset = Product.objects.all()
-#     serializer_class = ProductSerializer
-#     # podemos sobre escribir los atributos
-#     # lookup_field: si no se sobre escribe es pk. La clase va a generar la búsqueda a partir de este atributo
-#     # lookup_url_kwarg: el valor en la url que hace la consulta, por defecto es pk.
-#     lookup_url_kwarg = 'product_id'
 
 # Podemos actualizar el nombre de la clase para dejarlo con la convención ProductRetrieveUpdateDestroyAPIView
 class ProductDetailAPIView(generics.RetrieveUpdateDestroyAPIView):

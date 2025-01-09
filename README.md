@@ -1620,3 +1620,191 @@ class ProductListCreateAPIView(generics.ListCreateAPIView):
 ```
 
 Para consultar, por ejemplo, un precio mayor que, a la llamada la hacemos como `products/?price__gt=100` (dos guiones bajos). Para range hacemos la llamada como `products/?price__range=10.50`, la llamada se hace para el rango entre 10 y 50. Para name podemos indicar `products/?name__icontains=tele`.
+
+# SearchFilter and OrderingFilter
+
+## SearchFilter
+
+Para agregar filtros de búsqueda desde el backend lo hacemos mediante un paquete que viene instalado en rest framework
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+
+# importamos las librerías que permiten aplicar filtros desde el backend
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
+
+
+class ProductListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    filterset_class = ProductFilter
+    # indicamos a la view mediante que librerías se van a realizar filtros
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    # indicamos cuales son los fields con los que vamos a realizar la búsqueda filtrada
+    # la búsqueda se realiza por ambos fields a la vez
+    # =name: las búsquedas que hagamos tiene que coincidir exacto con el valor de name
+    search_fields = ['=name', 'description']
+
+#...
+```
+
+Para realizar una búsqueda mediante un filtro utilizamos `/products/?search=vision`. Las búsquedas no son sensibles a mayúsculas o minúsculas.
+
+## OrderingFilter
+
+Lo utilizamos para devolver los datos solicitados por el front con un orden en particular desde el back
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+
+class ProductListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    filterset_class = ProductFilter
+    filter_backends = [
+        DjangoFilterBackend, 
+        filters.SearchFilter,
+        # agregamos la clase que vamos a utilizar para realizar el ordenamiento
+        filters.OrderingFilter
+        ]
+    search_fields = ['name', 'description']
+    # indicamos los fields sobre los cuales podemos ordenar los datos devueltos
+    #
+    ordering_fields = ['name', 'price', 'stock']
+
+#...
+```
+
+Para realizar una búsqueda mediante un filtro utilizamos `products/?ordering=price`. Si queremos el orden inverso podemos utilizar el - (menos) en el parámetro de ordenamiento `products/?ordering=-price`
+
+Para aplicar ambos filtros lo hacemos mediante un & de la forma `products/?ordering=-price&search=lorem`
+
+
+# Writing Filter Backends
+
+Definimos un filtro propio desde el backend
+
+Editamos `filters.py` en `api`
+
+```py3
+#... 
+
+from rest_framework import filters
+
+# creamos un filtro para devolver solo productos en stock
+class InStockFilterBackend(filters.BaseFilterBackend):
+    # editamos el filter_queryset con nuestro filtro
+    def filter_queryset(self, request, queryset, view):
+        # indicamos que, del queryset filtre, para los elementos stock, solo los mayores que 0
+        return queryset.filter(stock__gt=0)
+
+#... 
+```
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+# importamos el filtro personalizado
+from api.filters import ProductFilter, InStockFilterBackend
+#...
+
+class ProductListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    # filterset_fields = ('name', 'price')
+    filterset_class = ProductFilter
+    filter_backends = [
+        #...
+        # agregamos el filtro personalizado
+        InStockFilterBackend
+        ]
+
+#...
+```
+
+Al agregar el filtro personalizado, de forma automática se van a filtrar los productos con stock 0, es decir, estos no van a aparecer para cualquier búsqueda que hagamos.
+
+# PageNumberPagination y LimitOffsetPagination
+
+Podemos realizar la paginación de los resultados de un llamada a la API desde el back, de esta forma ir entregando por partes los resultados del llamado.
+
+## PageNumberPagination
+
+Editamos settings.py en la carpeta principal del proyecto
+
+```py3
+#...
+REST_FRAMEWORK = {
+	#...
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    # configuramos la clase por defecto para hacer la paginación
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    # cantidad de resultados que va a mostrar por página
+    'PAGE_SIZE': 5,
+}
+```
+
+Al llamar a `/products/` vemos que en la respuesta ya contamos con un atributo next donde tenemos la url `/products/?page=2`. Si ingresamos en esta URL vamos a ver los elementos restantes de la búsqueda.
+
+Podemos aplicar filtros como `products/?ordering=-price`, para el atributo next vamos a ver que la url indica 
+`products/ordering=-price&page=2`
+
+podemos configurar la paginación solo para una view en particular
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+from rest_framework.pagination import PageNumberPagination
+
+
+class ProductListCreateAPIView(generics.ListCreateAPIView):
+    # para evitar errores en el servidor cuando se realiza la paginación
+    # hace un primer orden de los elementos que trae mediante pk
+    queryset = Product.objects.order_by('pk')
+    serializer_class = ProductSerializer
+    # configuramos la clase con la que vamos a hacer la paginación
+    pagination_class = PageNumberPagination
+    # configuramos la cantidad de elementos por página
+    pagination_class.page_size = 3
+    # podemos editar el nombre del atributo en el navegador que va a representar las páginas
+    # la paginación se verá como /products/?pagenum=2
+    pagination_class.page_query_param = 'pagenum'
+    # podemos permitir al front que nos indique la cantidad de elementos por página
+    # la paginación se verá como /products/?pagenum=2&size=2
+    pagination_class.page_size_query_param = 'size'
+    # para evitar que el usuario seleccione cantidades de elementos grandes como 1000
+    pagination_class.max_page_size = 5
+#...
+```
+
+## LimitOffsetPagination
+
+Podemos configura la clase LimitOffsetPagination para la paginación de forma predeterminada en settings.py, como hicimos con PageNumberPagination o para una view en particular.
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
+
+
+class ProductListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Product.objects.order_by('pk')
+    serializer_class = ProductSerializer
+    # indicamos la clase por defecto para la paginación
+    pagination_class = LimitOffsetPagination
+    # también podemos cambiar el nombre del atributo limit y establecer un máximo para el límite
+    pagination_class.limit_query_param = 'number'
+    pagination_class.max_limit = 5
+
+#...
+```
+
+En la URL del llamado ahora podemos indicar un `limit` y un `offset` de la forma `products/?limit=2&offset=3`, donde limit es la cantidad de elementos que va a devolver en la página y offset es el número del elemento desde donde va a mostrar. En el ejemplo vamos a devolver 2 elementos pero en esta página vamos a mostrar desde el elemento 3.
