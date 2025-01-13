@@ -1956,7 +1956,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 Podemos utilizar los filtros como antes, mediante el path `orders/?status=Pending`, así como también `orders/?created_at__gt=2024-09-30`. En el caso de la fecha debe estar en el formato `yyyy-mm-dd`. 
 
-## Actions
+## Actions and permission
 
 Para poder mantener la view que nos devolvía las ordenes según el usuario (`user-orders/`), utilizando para la misma la lógica que venimos usando en la viewset OrderViewSet, nos vemos en la necesidad de generar nuevas action, además de las que ya vienen por defecto con la ViewSet como ser create o retrieve. Seguimos lo indicado en el [link](https://www.django-rest-framework.org/api-guide/viewsets/#marking-extra-actions-for-routing)
 
