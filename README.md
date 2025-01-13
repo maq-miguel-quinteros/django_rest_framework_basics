@@ -1881,7 +1881,7 @@ Editamos `serializers.py` en `api`
 #...
 
 class OrderSerializer(serializers.ModelSerializer):
-    # sobreescribimos order_id para indicar que el mismo sea read_only
+    # sobrescribimos order_id para indicar que el mismo sea read_only
     # mediante esto order_id no va a aparecer en el formulario de alta de orden
     order_id = serializers.UUIDField(read_only=True)
     items = OrderItemSerializer(many=True, read_only=True)
@@ -1896,4 +1896,102 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = ('order_id', 'created_at', 'user', 'status', 'items', 'total_price')
 
 #...
+```
+
+# Viewset Action, filtering and permission  
+
+Instalamos `isort` para ordenar las importaciones en `views.py`
+
+```shellscript
+pip install isort
+isort .\api\views.py
+```
+
+## Filtering
+
+Editamos `filters.py` en `api`
+
+```py3
+#...
+
+from api.models import Product, Order
+
+#...
+
+class OrderFilter(django_filters.FilterSet):
+    # sobrescribimos  el atributo created_at
+    # DateFilter establece un filtro para el contenido de created_at
+    # field_name='created_at__date' extrae del atributo created_at, que es DateTime solo la fecha, Date
+    # El formato original es "2024-11-28T21:11:15.606905Z", mediante el filtro queda solo 2024-11-28
+    created_at = django_filters.DateFilter(field_name='created_at__date')
+    class Meta:
+        model = Order
+        fields = {
+            'status': ['exact'],
+            'created_at': ['lt', 'gt', 'exact']
+        }
+    
+#...
+```
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+
+from api.filters import InStockFilterBackend, OrderFilter, ProductFilter
+
+#...
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.prefetch_related('items__product')
+    serializer_class = OrderSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+    filterset_class = OrderFilter
+    filter_backends = [DjangoFilterBackend]
+
+#...
+```
+
+Podemos utilizar los filtros como antes, mediante el path `orders/?status=Pending`, así como también `orders/?created_at__gt=2024-09-30`. En el caso de la fecha debe estar en el formato `yyyy-mm-dd`. 
+
+## Actions
+
+Para poder mantener la view que nos devolvía las ordenes según el usuario (`user-orders/`), utilizando para la misma la lógica que venimos usando en la viewset OrderViewSet, nos vemos en la necesidad de generar nuevas action, además de las que ya vienen por defecto con la ViewSet como ser create o retrieve. Seguimos lo indicado en el [link](https://www.django-rest-framework.org/api-guide/viewsets/#marking-extra-actions-for-routing)
+
+Editamos `views.py` en `api`
+
+```py3
+# ...
+
+from rest_framework.decorators import api_view, action
+
+#...
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.prefetch_related('items__product')
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+    filterset_class = OrderFilter
+    filter_backends = [DjangoFilterBackend]
+
+    # detail: es True si vamos a mostrar solo un elemento, False para una lista de elementos
+    # url_path: la url a la que responde esta consulta GET
+    @action(
+        detail=False, 
+        methods=['get'], 
+        url_path='user-orders',
+        # podemos indicar un permiso particular para este action o dejar el que indicamos arriba
+        # permission_classes=[IsAuthenticated]
+        )
+    def user_orders(self, request):
+        # trae lo que tiene el atributo queryset mas arriba
+        # da a user en el filtro el valor del usuario de la request (usuario logueado)
+        orders = self.get_queryset().filter(user=request.user)
+        serializer = self.get_serializer(orders, many=True)
+        return Response(serializer.data)
+
+#... 
 ```
