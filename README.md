@@ -1808,3 +1808,92 @@ class ProductListCreateAPIView(generics.ListCreateAPIView):
 ```
 
 En la URL del llamado ahora podemos indicar un `limit` y un `offset` de la forma `products/?limit=2&offset=3`, donde limit es la cantidad de elementos que va a devolver en la página y offset es el número del elemento desde donde va a mostrar. En el ejemplo vamos a devolver 2 elementos pero en esta página vamos a mostrar desde el elemento 3.
+
+# [ViewSets](https://www.django-rest-framework.org/api-guide/viewsets/) and [Ruters](https://www.django-rest-framework.org/api-guide/routers/)
+
+Mediante las ViewSets podemos agrupar bajo una misma view distintos tipos de métodos HTTP (GET, POST, PUT...) a métodos Python llamados actions.
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+
+from rest_framework import viewsets
+
+#...
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.prefetch_related('items__product')
+    serializer_class = OrderSerializer
+    permission_classes = [AllowAny]
+    # podemos deshabilitar la paginación por defecto (que indicamos en settings.py)
+    pagination_class = None
+
+
+# class OrderListAPIView(generics.ListAPIView):
+#     queryset = Order.objects.prefetch_related('items__product')
+#     serializer_class = OrderSerializer
+
+# class UserOrderListAPIView(generics.ListAPIView):
+#     queryset = Order.objects.prefetch_related('items__product')
+#     serializer_class = OrderSerializer
+#     permission_classes = [IsAuthenticated]
+
+#     def get_queryset(self):
+#         qs = super().get_queryset()
+#         return qs.filter(user=self.request.user)
+
+#...
+```
+
+Editamos `urls.py` en `api`
+
+```py3
+from django.urls import path
+from . import views
+from rest_framework.routers import DefaultRouter
+
+
+urlpatterns = [
+    path('products/', views.ProductListCreateAPIView.as_view()),
+    # path('products/create/', views.ProductCreateAPIView.as_view()),
+    path('products/info/', views.ProductInfoAPIView.as_view()),
+    path('products/<int:product_id>/', views.ProductDetailAPIView.as_view()),    
+    # path('orders/', views.OrderListAPIView.as_view()),
+    # path('user-orders/', views.UserOrderListAPIView.as_view(), name='user-orders'),
+]
+
+# creamos una variable que hereda los métodos de DefaultRouter
+router = DefaultRouter()
+# registramos un path en el objeto con la view a la que va a apuntar
+router.register('orders/', views.OrderViewSet)
+# sumamos el path creado al listado de paths de la variable urlpatterns
+# se crean path como orders/ y orders/<int:pk>
+# según el método HTTP los pedidos se van a manejar desde las actions
+urlpatterns += router.urls
+```
+
+Cuando vamos a crear una nueva orden, con un llamado POST, necesitamos que el id de la orden se cree de forma automática, es decir, que nosotros no podamos crear ese atributo desde el formulario de alta de ordenes.
+
+Editamos `serializers.py` en `api`
+
+```py3
+#...
+
+class OrderSerializer(serializers.ModelSerializer):
+    # sobreescribimos order_id para indicar que el mismo sea read_only
+    # mediante esto order_id no va a aparecer en el formulario de alta de orden
+    order_id = serializers.UUIDField(read_only=True)
+    items = OrderItemSerializer(many=True, read_only=True)
+    total_price = serializers.SerializerMethodField()
+
+    def get_total_price(self, obj):
+        order_items = obj.items.all()
+        return sum(order_item.item_subtotal for order_item in order_items)
+
+    class Meta:
+        model = Order
+        fields = ('order_id', 'created_at', 'user', 'status', 'items', 'total_price')
+
+#...
+```

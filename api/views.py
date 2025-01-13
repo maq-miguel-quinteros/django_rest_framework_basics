@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.views import APIView
+from rest_framework import viewsets
 from api.filters import ProductFilter, InStockFilterBackend
 from rest_framework import filters
 from django_filters.rest_framework import DjangoFilterBackend
@@ -60,25 +61,27 @@ class ProductDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         return super().get_permissions()
 
 
-
-class OrderListAPIView(generics.ListAPIView):
+class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.prefetch_related('items__product')
     serializer_class = OrderSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
 
-# UserOrderListAPIView: ordenes de un usuario específico
-class UserOrderListAPIView(generics.ListAPIView):
-    queryset = Order.objects.prefetch_related('items__product')
-    serializer_class = OrderSerializer
-    # permission_classes: permite establecer los permisos para consultar la view
-    # IsAuthenticated: solo permite realizar la consulta a usuarios autenticados
-    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        # super().get_queryset(): traemos el contenido del atributo queryset de arriba
-        qs = super().get_queryset()
-        # filter(user=self.request.user): filtramos qs pasando como parámetro de filtro el usuario logueado
-        # user=self.request.user: mediante self podemos acceder al request y de ahí al user de ese request
-        return qs.filter(user=self.request.user)
+# class OrderListAPIView(generics.ListAPIView):
+#     queryset = Order.objects.prefetch_related('items__product')
+#     serializer_class = OrderSerializer
+
+# class UserOrderListAPIView(generics.ListAPIView):
+#     queryset = Order.objects.prefetch_related('items__product')
+#     serializer_class = OrderSerializer
+#     permission_classes = [IsAuthenticated]
+
+#     def get_queryset(self):
+#         qs = super().get_queryset()
+#         return qs.filter(user=self.request.user)
+
+
 
 
 # def get(): definimos el método get para métodos HTTP GET
