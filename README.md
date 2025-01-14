@@ -1995,3 +1995,55 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 #... 
 ```
+
+# Viewset Permissions | Admin vs. Normal User
+
+Modificamos la clase OrderViewSet para que los usuarios normales puedan ver, editar y borrar sus propias ordenes y solo los usuarios administradores puedan ver, editar y borrar las ordenes de todos los usuarios
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.prefetch_related('items__product')
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+    filterset_class = OrderFilter
+    filter_backends = [DjangoFilterBackend]
+
+    # redefinimos el atributo queryset
+    def get_queryset(self):
+        # traemos todos los datos que devuelve queryset de arriba
+        qs = super().get_queryset()
+        # si el user que logueado no pertenece al staff, es decir, no es administrador
+        if not self.request.user.is_staff:
+            # filtramos los elementos para solo devolver los del usuario logueado
+            qs = qs.filter(user=self.request.user)
+        return qs
+    
+    # no necesitamos este endpoint ya que por defecto muestra solo ordenes del usuario logueado
+    # @action(
+    #     detail=False, 
+    #     methods=['get'], 
+    #     url_path='user-orders',
+    #     )
+    # def user_orders(self, request):
+    #     orders = self.get_queryset().filter(user=request.user)
+    #     serializer = self.get_serializer(orders, many=True)
+    #     return Response(serializer.data)
+
+#...
+```
+
+Hacemos el usuario que creamos antes (maq) como usuario común
+
+Editamos `api.http` en la carpeta base del proyecto
+
+```http
+###
+# hacemos login del usuario y pegamos el access token para poder hacer la consulta
+GET  http://localhost:8000/api/orders/
+Authorization: Bearer <<INGRESAR ACCESS TOKEN>>
+```

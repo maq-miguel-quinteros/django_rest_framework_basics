@@ -70,21 +70,32 @@ class OrderViewSet(viewsets.ModelViewSet):
     filterset_class = OrderFilter
     filter_backends = [DjangoFilterBackend]
 
-    # detail: es True si vamos a mostrar solo un elemento, False para una lista de elementos
-    # url_path: la url a la que responde esta consulta GET
-    @action(
-        detail=False, 
-        methods=['get'], 
-        url_path='user-orders',
-        # podemos indicar un permiso particular para este action o dejar el que indicamos arriba
-        # permission_classes=[IsAuthenticated]
-        )
-    def user_orders(self, request):
-        # trae lo que tiene el atributo queryset mas arriba
-        # da a user en el filtro el valor del usuario de la request (usuario logueado)
-        orders = self.get_queryset().filter(user=request.user)
-        serializer = self.get_serializer(orders, many=True)
-        return Response(serializer.data)
+    # redefinimos el atributo queryset
+    def get_queryset(self):
+        # traemos todos los datos que devuelve queryset de arriba
+        qs = super().get_queryset()
+        # si el user que logueado no pertenece al staff, es decir, no es administrador
+        if not self.request.user.is_staff:
+            # filtramos los elementos para solo devolver los del usuario logueado
+            qs = qs.filter(user=self.request.user)
+        return qs
+
+    # no necesitamos este endpoint ya que por defecto muestra solo ordenes de usuarios
+    # # detail: es True si vamos a mostrar solo un elemento, False para una lista de elementos
+    # # url_path: la url a la que responde esta consulta GET
+    # @action(
+    #     detail=False, 
+    #     methods=['get'], 
+    #     url_path='user-orders',
+    #     # podemos indicar un permiso particular para este action o dejar el que indicamos arriba
+    #     # permission_classes=[IsAuthenticated]
+    #     )
+    # def user_orders(self, request):
+    #     # trae lo que tiene el atributo queryset mas arriba
+    #     # da a user en el filtro el valor del usuario de la request (usuario logueado)
+    #     orders = self.get_queryset().filter(user=request.user)
+    #     serializer = self.get_serializer(orders, many=True)
+    #     return Response(serializer.data)
 
 
 # def get(): definimos el método get para métodos HTTP GET
