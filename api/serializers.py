@@ -40,12 +40,44 @@ class OrderItemSerializer(serializers.ModelSerializer):
         # por defecto solo mostraba el id del producto, ahora que configuramos fuera de meta un atributo product con lo que devuelve el serializer, va a traer esos datos
         fields = ('product_name', 'product_price', 'quantity', 'item_subtotal')
 
+# OrderCreateSerializer: creamos un serializer para manejar el alta de orders
+class OrderCreateSerializer(serializers.ModelSerializer):
+    # creamos un serializer específico para que quede anidado
+    # al funcionar solo en esta clase OrderCreateSerializer no es necesario declararlo afuera
+    class OrderItemCreateSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = OrderItem
+            fields = ['product', 'quantity']
+
+    items = OrderItemCreateSerializer(many= True)
+
+    # redefinimos el método create del serializer
+    # validate_date es lo que nos llega desde la view que utiliza este serializer
+    def create(self, validated_data):
+        # guardamos en orderitem_data lo que viene en validated_data agregando lo que tenemos en items
+        orderitem_data = validated_data.pop('items')
+        # creamos la nueva orden pasando los datos validados después de agregar los items
+        # la nueva orden es un nuevo elemento del modelo, es decir, un nuevo elemento de la DB
+        order = Order.objects.create(**validated_data)
+        # creamos los items
+        for item in orderitem_data:
+            # para la orden que creamos antes creamos cada uno de los item
+            # un nuevo item es un nuevo elemento del modelo, es decir, un nuevo elemento de la DB
+            OrderItem.objects.create(order=order, **item)
+        
+        return order
+        
+
+    class Meta:
+        model = Order
+        # los fields que vamos a usar en el alta (order_id', 'created_at' y 'total_price' se crean de forma automática)
+        fields = ('user', 'status', 'items')
+
 
 class OrderSerializer(serializers.ModelSerializer):
-    # sobreescribimos order_id para indicar que el mismo sea read_only
-    # mediante esto order_id no va a aparecer en el formulario de alta de orden
     order_id = serializers.UUIDField(read_only=True)
-    items = OrderItemSerializer(many=True, read_only=True)
+    # quitamos el read_only=True de items para poder, mediante un POST, modificar o dar de alta items
+    items = OrderItemSerializer(many=True)
     total_price = serializers.SerializerMethodField()
 
     def get_total_price(self, obj):

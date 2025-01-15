@@ -2047,3 +2047,76 @@ Editamos `api.http` en la carpeta base del proyecto
 GET  http://localhost:8000/api/orders/
 Authorization: Bearer <<INGRESAR ACCESS TOKEN>>
 ```
+
+# Creación de objetos anidados | Anulación del método create() del serializador
+
+Vamos a crear serializadores anidados que permitan, mediante métodos HTTP, recibir el alta o modificación de elementos de modelos distintos. Para poder manejar los POST en el serializador anidado tenemos que editar el método create del serializador.
+
+Editamos `serializers.py` en `api`
+
+```py3
+#...
+
+# OrderCreateSerializer: creamos un serializer para manejar el alta de orders
+class OrderCreateSerializer(serializers.ModelSerializer):
+    # creamos un serializer específico para que quede anidado
+    # al funcionar solo en esta clase OrderCreateSerializer no es necesario declararlo afuera
+    class OrderItemCreateSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = OrderItem
+            fields = ['product', 'quantity']
+
+    items = OrderItemCreateSerializer(many= True)
+
+    # redefinimos el método create del serializer
+    # validate_date es lo que nos llega desde la view que utiliza este serializer
+    def create(self, validated_data):
+        # guardamos en orderitem_data lo que viene en validated_data agregando lo que tenemos en items
+        orderitem_data = validated_data.pop('items')
+        # creamos la nueva orden pasando los datos validados después de agregar los items
+        # la nueva orden es un nuevo elemento del modelo, es decir, un nuevo elemento de la DB
+        order = Order.objects.create(**validated_data)
+        # creamos los items
+        for item in orderitem_data:
+            # para la orden que creamos antes creamos cada uno de los item
+            # un nuevo item es un nuevo elemento del modelo, es decir, un nuevo elemento de la DB
+            OrderItem.objects.create(order=order, **item)
+        
+        return order
+        
+
+    class Meta:
+        model = Order
+        # los fields que vamos a usar en el alta (order_id', 'created_at' y 'total_price' se crean de forma automática)
+        fields = ('user', 'status', 'items')
+
+#...
+```
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+from api.serializers import (OrderItemSerializer, OrderSerializer,
+                             ProductInfoSerializer, ProductSerializer,
+                             OrderCreateSerializer)
+
+#...
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.prefetch_related('items__product')
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+    filterset_class = OrderFilter
+    filter_backends = [DjangoFilterBackend]
+
+    def get_serializer_class(self):
+        # verificamos si la action es create cambiamos el serializer de serializer_class
+        # también podemos chequear self.request.method == 'POST'
+        if self.action == 'create':
+            return OrderCreateSerializer
+        return super().get_serializer_class()
+
+#...
+```
