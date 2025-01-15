@@ -113,5 +113,41 @@ Content-Type: application/json
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2MjkyMzQ4LCJpYXQiOjE3MzYyOTIwNDgsImp0aSI6IjlhMjM2NzcxNDY4MDQ3NmZiZTExNzgzOGVmMWU4Y2RjIiwidXNlcl9pZCI6Mn0.5xMJOoRPKdt7fMOnjCXYA1bKtoNdmBGB8cEr6BE0y3A
 
 ###
-GET  http://localhost:8000/api/orders/
-Authorization: Bearer <<INGRESAR ACCESS TOKEN>>
+
+# traemos las ordenes para el usuario logueado
+GET  http://localhost:8000/orders/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2OTc1MDIyLCJpYXQiOjE3MzY5NzQ3MjIsImp0aSI6IjdkYjYyNjg3YTdhZDQ1ZGI5M2RhZDA1Mzc1YTEyNWRlIiwidXNlcl9pZCI6MX0.uuw9LDe3efWpCgZbP3R0iRfBw4QcHLlyEMeXA3uuqko
+
+###
+
+# Creamos una nueva orden
+POST  http://localhost:8000/orders/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2OTczMjk3LCJpYXQiOjE3MzY5NzI5OTcsImp0aSI6ImIzOGNhOTYyODk0ODQzOTViZDIyZDg5NWE3OWE2NzgwIiwidXNlcl9pZCI6Mn0.OL0HP1MmK5ky2oDqZgbu0eYakRHGNFWEfQdkZ1oyeN0
+
+{
+    "status": "Pending",
+    "user": 2,
+    "items": [
+        {
+            "product": 2,
+            "quantity": 2
+        }
+    ]
+}
+
+###
+POST  http://localhost:8000/orders/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM2OTc2MTg3LCJpYXQiOjE3MzY5NzU4ODcsImp0aSI6IjkyMzNjNzU4MGFjMTQ4MWZhMjk3YmI2N2ZjNzQ0MjBmIiwidXNlcl9pZCI6Mn0.peUGOj7exrjw79xlIVAyzaTXIoPGe-FTzzUwrudUNnk
+
+{
+    "status": "Pending",
+    "items": [
+        {
+            "product": 2,
+            "quantity": 2
+        }
+    ]
+}

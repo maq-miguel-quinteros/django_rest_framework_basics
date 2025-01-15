@@ -2065,30 +2065,35 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         class Meta:
             model = OrderItem
             fields = ['product', 'quantity']
-
+    
     items = OrderItemCreateSerializer(many= True)
+    # sumamos order id para que la respuesta sea igual a la respuesta de la consulta GET
+    order_id = serializers.UUIDField(read_only=True)
 
     # redefinimos el método create del serializer
     # validate_date es lo que nos llega desde la view que utiliza este serializer
     def create(self, validated_data):
-        # guardamos en orderitem_data lo que viene en validated_data agregando lo que tenemos en items
+        # guardamos en orderitem_data los items que viene en validated_data validated_data
+        # pop() guarda en orderitem_data los elementos con clave items y lo elimina de 
         orderitem_data = validated_data.pop('items')
         # creamos la nueva orden pasando los datos validados después de agregar los items
         # la nueva orden es un nuevo elemento del modelo, es decir, un nuevo elemento de la DB
+        # mediante ** indicamos que estamos pasando multiples parámetros a la función create
         order = Order.objects.create(**validated_data)
         # creamos los items
         for item in orderitem_data:
             # para la orden que creamos antes creamos cada uno de los item
             # un nuevo item es un nuevo elemento del modelo, es decir, un nuevo elemento de la DB
             OrderItem.objects.create(order=order, **item)
-        
+        # después de crear todo devolvemos la orden
+        # esta es lo único que necesita la view para mostrarnos ordenes e items
         return order
         
 
     class Meta:
         model = Order
         # los fields que vamos a usar en el alta (order_id', 'created_at' y 'total_price' se crean de forma automática)
-        fields = ('user', 'status', 'items')
+        fields = ('order_id','user', 'status', 'items')
 
 #...
 ```
@@ -2119,4 +2124,104 @@ class OrderViewSet(viewsets.ModelViewSet):
         return super().get_serializer_class()
 
 #...
+```
+
+Probamos el funcionamiento
+
+Editamos el archivo `api.http` en la carpeta base del proyecto 
+
+```http
+###
+
+# hacemos el login del usuario
+
+# traemos las ordenes para el usuario logueado
+GET  http://localhost:8000/orders/
+Content-Type: application/json
+Authorization: Bearer <<access token>>
+
+###
+
+# Creamos una nueva orden. Para hacerlo tenemos que indicar el id del usuario en user
+POST  http://localhost:8000/orders/
+Content-Type: application/json
+Authorization: Bearer <<access token>>
+
+{
+    "status": "Pending",
+    "user": 2,
+    "items": [
+        {
+            "product": 2,
+            "quantity": 2
+        }
+    ]
+}
+```
+
+Al establecer que solo el usuario logueado pueda crear una nueva orden podemos quitar el atributo user del JSON que pasamos cuando creamos la orden.
+
+Editamos `views.py` en `api`
+
+```py3
+#...
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.prefetch_related('items__product')
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+    filterset_class = OrderFilter
+    filter_backends = [DjangoFilterBackend]
+
+    # perform_create: indicamos realizar algo cuando create se ejecute
+    def perform_create(self, serializer):
+        # cuando create se ejecuta ejecutamos save del serializer
+        # el user con el que se va a guardar el serializer va a ser el de la request (logueado)
+        serializer.save(user=self.request.user)
+
+#...
+```
+
+Editamos `serializers.py` en `api`
+
+```py3
+#...
+
+class OrderCreateSerializer(serializers.ModelSerializer):
+
+	#...
+
+	class Meta:
+        model = Order
+        # los fields que vamos a usar en el alta (order_id', 'created_at' y 'total_price' se crean de forma automática)
+        fields = ('order_id','user', 'status', 'items')
+		# extra_kwargs: indicamos atributos que modifican los fields
+		# hacemos al user read_only para que no pueda ser modificado en el alta pero aparezca en la orden que esta devuelve
+        extra_kwargs = {
+            'user': {'read_only': True}
+        }
+
+#...
+```
+
+Editamos `api.http` para en la carpeta base para probar
+
+```http
+###
+
+# no necesitamos pasar el usuario esta vez
+POST  http://localhost:8000/orders/
+Content-Type: application/json
+Authorization: Bearer <<access token>>
+
+{
+    "status": "Pending",
+    "items": [
+        {
+            "product": 2,
+            "quantity": 2
+        }
+    ]
+}
 ```
