@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 from .models import Product, Order, OrderItem
 
@@ -49,7 +50,8 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             model = OrderItem
             fields = ['product', 'quantity']
     
-    items = OrderItemCreateSerializer(many= True)
+    # required=False: permite hacer un PUT o POST sin necesidad de tener items en el llamado
+    items = OrderItemCreateSerializer(many= True, required=False)
     # sumamos order id para que la respuesta sea igual a la respuesta de la consulta GET
     order_id = serializers.UUIDField(read_only=True)
 
@@ -59,19 +61,31 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         # guardamos en orderitem_data los items que viene en validated_data validated_data
         # pop() guarda en orderitem_data los elementos con clave items y lo elimina de 
         orderitem_data = validated_data.pop('items')
-        # creamos la nueva orden pasando los datos validados después de agregar los items
-        # la nueva orden es un nuevo elemento del modelo, es decir, un nuevo elemento de la DB
-        # mediante ** indicamos que estamos pasando multiples parámetros a la función create
-        order = Order.objects.create(**validated_data)
-        # creamos los items
-        for item in orderitem_data:
-            # para la orden que creamos antes creamos cada uno de los item
-            # un nuevo item es un nuevo elemento del modelo, es decir, un nuevo elemento de la DB
-            OrderItem.objects.create(order=order, **item)
-        # después de crear todo devolvemos la orden
-        # esta es lo único que necesita la view para mostrarnos ordenes e items
+
+        with transaction.atomic():
+            order = Order.objects.create(**validated_data)
+            for item in orderitem_data:
+                OrderItem.objects.create(order=order, **item)
         return order
-        
+    
+    # instance: son los datos que estamos actualizando, es decir, la orden con sus items
+    def update(self, instance, validated_data):
+        orderitem_data = validated_data.pop('items')
+
+        # indicamos que todo lo que se realice a continuación sea una transacción
+        with transaction.atomic():
+            # actualizamos el contenido de la variable instance pasando los datos de la orden sin los items
+            instance = super().update(instance, validated_data)
+
+            # Verificamos que tengamos items que actualizar
+            if orderitem_data is not None:
+                # borramos todos los items que contiene actualmente la orden
+                instance.items.all().delete()
+
+            # creamos de nuevo los items con las modificaciones enviadas
+            for item in orderitem_data:
+                OrderItem.objects.create(order=instance, **item)        
+        return instance
 
     class Meta:
         model = Order

@@ -78,9 +78,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
     def get_serializer_class(self):
-        # verificamos si la action es create cambiamos el serializer de serializer_class
-        # también podemos chequear self.request.method == 'POST'
-        if self.action == 'create':
+        # indicamos el cambio de serializer para create o update
+        if self.action == 'create' or self.action == 'update':
             return OrderCreateSerializer
         return super().get_serializer_class()
 
