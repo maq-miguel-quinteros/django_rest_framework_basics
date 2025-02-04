@@ -2300,3 +2300,34 @@ class OrderCreateSerializer(serializers.ModelSerializer):
 
     # ...
 ```
+
+# Campos de ModelSerializer: prácticas recomendadas
+
+Podemos indicar los fields de un serializer uno por uno o indicar `__all__` para que el serializer tome todos los atributos del modelo para crear el serializer.
+
+```py3
+class ExampleSerializer (serializer.ModelSerializer):
+    class Meta:
+        model = Example
+        fields = '__all__'
+```
+
+También podemos indicar cuales son los atributos del modelo que queremos excluir de los fields, esto será como indicar que tome todos los atributos menos los que indicamos con `exclude`
+
+```py3
+class ExampleSerializer (serializer.ModelSerializer):
+    class Meta:
+        model = Example
+        exclude = ('password')
+```
+
+Mediante fields podemos hacer referencia a cualquiera de los atributos del modelo, así como también a métodos del modelo que devuelvan valores y, si tenemos una clave foránea, mediante el parámetro `related_name` podemos sumar ese atributo como un field.
+
+```py3
+class ExampleSerializer (serializer.ModelSerializer):
+    class Meta:
+        model = Example
+        # get_full_name: método que concatena name + last_name
+        # orders: clave foránea que permite conocer las ordenes de example 
+        exclude = ('name', 'last_name', 'get_full_name', 'orders')
+```
